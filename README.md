@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ~/chy — 个人技术实验室
 
-## Getting Started
+## 这个网站是什么
 
-First, run the development server:
+这是我的个人技术博客和项目展示平台。它不只是一个静态页面，而是一个**全栈 Web 应用**——可以注册账号、登录、发表文章、展示项目。
+
+建这个站的初衷很简单：我需要一个属于自己的角落，能写字、能展示作品、能折腾技术。
+
+## 目前已经有的功能
+
+- 🎨 **亮色 / 暗色自由切换**——默认暗色，点击按钮切亮色，刷新记住选择
+- 🎬 **开屏动画**——进入网站先看到一个「INITIALIZING SYSTEM...」的打字动画，点击「Enter Lab」进入主页
+- 📝 **Markdown 博客**——往 `posts/` 文件夹扔 `.md` 文件就能发布文章，不需要后台编辑器
+- 👤 **邮箱注册 + 登录**——真实的数据库存储，密码用 bcrypt 加密，JWT 维持登录状态
+- 🛡️ **管理后台**——`/admin` 路由受保护，未登录自动跳转登录页
+- 🌐 **中英文切换**——导航栏一键切换语言
+- 📊 **首页统计**——项目数、文章数、技术栈数量动态展示
+
+## 技术栈
+
+| 层 | 技术 |
+|---|---|
+| 框架 | Next.js 16 (App Router) |
+| 样式 | Tailwind CSS 4 + CSS 自定义属性 |
+| 动画 | framer-motion |
+| 数据库 | SQLite (Prisma 7 ORM) |
+| 认证 | JWT (jose) + bcryptjs |
+| 校验 | Zod |
+| 博客 | gray-matter + react-markdown |
+| 图标 | lucide-react |
+| 部署 | Vercel |
+
+## 本地运行
 
 ```bash
+npm install
+npx prisma migrate dev --name init
+npx prisma generate
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+打开 http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 我还想做什么
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+下面是我对这个网站的后续想法，慢慢来，想到就加：
 
-## Learn More
+### 内容与写作
+- [ ] **文章标签系统**——给文章打标签，按标签筛选
+- [ ] **全文搜索**——搜索文章标题和内容
+- [ ] **文章目录（TOC）**——长文章右侧自动生成目录锚点
+- [ ] **阅读时长估算**——类似 Medium 的「预计阅读 5 分钟」
+- [ ] **代码块复制按钮**——一键复制代码块内容
+- [ ] **文章置顶**——某些文章固定在列表顶部
 
-To learn more about Next.js, take a look at the following resources:
+### 项目展示
+- [ ] **接入 GitHub API**——自动拉取 GitHub 仓库信息，不用手动更新项目数据
+- [ ] **项目详情页**——每个项目点进去有完整的 README 渲染
+- [ ] **在线 Demo 嵌入**——项目卡片里直接嵌入 iframe 预览
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 交互与体验
+- [ ] **页面过渡动画**——路由切换时有平滑的过渡效果
+- [ ] **开屏自定义视频**——替换现在的纯代码动画，放一段自己的视频
+- [ ] **回到顶部按钮**——文章读到底一键回顶
+- [ ] **阅读进度条**——页面顶部显示阅读进度
+- [ ] **评论系统**——接入 Giscus 或自己实现
+- [ ] **RSS 订阅**——生成 RSS Feed，别人可以订阅
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 后台管理
+- [ ] **在线 Markdown 编辑器**——在 `/admin` 里直接写文章、预览、发布
+- [ ] **文章草稿功能**——草稿状态的文章不显示在前台
+- [ ] **图片上传**——粘贴或拖拽图片自动上传到 CDN
+- [ ] **访问统计**——文章阅读量、网站 PV/UV
+- [ ] **媒体库**——统一管理上传的图片和文件
 
-## Deploy on Vercel
+### 工程化
+- [ ] **单元测试**——核心逻辑加测试覆盖
+- [ ] **CI/CD**——GitHub Actions 自动构建部署
+- [ ] **PostgreSQL 迁移**——用户量大了从 SQLite 切到 PostgreSQL
+- [ ] **Docker 化**——一键 `docker compose up` 启动
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 脑洞
+- [ ] **AI 写作助手**——接 OpenAI API，帮忙润色文章
+- [ ] **终端风格主题**——给网站加一个命令行风格的皮肤
+- [ ] **访客地图**——显示最近访问的地理位置（不侵犯隐私的前提下）
+- [ ] **时光机**——按年份归档所有文章，像翻日记一样
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+这些想法有些很快就能做，有些需要时间沉淀。这个 README 会跟着网站一起成长。
+
+**但积跬步，莫问前程。**
