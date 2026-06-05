@@ -18,17 +18,17 @@
 
 ## 技术栈
 
-| 层 | 技术 |
-|---|---|
-| 框架 | Next.js 16 (App Router) |
-| 样式 | Tailwind CSS 4 + CSS 自定义属性 |
-| 动画 | framer-motion |
-| 数据库 | SQLite (Prisma 7 ORM) |
-| 认证 | JWT (jose) + bcryptjs |
-| 校验 | Zod |
-| 博客 | gray-matter + react-markdown |
-| 图标 | lucide-react |
-| 部署 | Vercel |
+| 层     | 技术                            |
+| ------ | ------------------------------- |
+| 框架   | Next.js 16 (App Router)         |
+| 样式   | Tailwind CSS 4 + CSS 自定义属性 |
+| 动画   | framer-motion                   |
+| 数据库 | SQLite (Prisma 7 ORM)           |
+| 认证   | JWT (jose) + bcryptjs           |
+| 校验   | Zod                             |
+| 博客   | gray-matter + react-markdown    |
+| 图标   | lucide-react                    |
+| 部署   | Vercel                          |
 
 ## 本地运行
 
@@ -46,12 +46,13 @@ npm run dev
 下面是我对这个网站的后续想法，慢慢来，想到就加：
 
 ### 内容与写作
-- [ ] **文章标签系统**——给文章打标签，按标签筛选
+- [ ] **分类系统**——目前不完善
 - [ ] **全文搜索**——搜索文章标题和内容
-- [ ] **文章目录（TOC）**——长文章右侧自动生成目录锚点
+- [ ] **github转移**——将github的内容移植进我的网站，并且再次分类
 - [ ] **阅读时长估算**——类似 Medium 的「预计阅读 5 分钟」
 - [ ] **代码块复制按钮**——一键复制代码块内容
 - [ ] **文章置顶**——某些文章固定在列表顶部
+- [ ] 更改开屏动画
 
 ### 项目展示
 - [ ] **接入 GitHub API**——自动拉取 GitHub 仓库信息，不用手动更新项目数据
@@ -89,4 +90,4 @@ npm run dev
 
 这些想法有些很快就能做，有些需要时间沉淀。这个 README 会跟着网站一起成长。
 
-**但积跬步，莫问前程。**
+**yes,sir**
