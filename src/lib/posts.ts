@@ -1,42 +1,86 @@
-import fs from "fs";
-import path from "path";
-import matter from "gray-matter";
+import { prisma } from "@/lib/db";
 
-const postsDirectory = path.join(process.cwd(), "posts");
+export interface Author {
+  name: string;
+  email: string;
+}
 
 export interface Post {
+  id: string;
   slug: string;
   title: string;
   date: string;
   excerpt: string;
   content: string;
+  category: string;
+  published: boolean;
+  authorId?: string | null;
+  author?: Author | null;
 }
 
-export function getAllPosts(): Post[] {
-  if (!fs.existsSync(postsDirectory)) return [];
+export async function getAllPosts(): Promise<Post[]> {
+  const posts = await prisma.post.findMany({
+    where: { published: true },
+    orderBy: { createdAt: "desc" },
+    include: { author: { select: { name: true, email: true } } },
+  });
 
-  const filenames = fs.readdirSync(postsDirectory);
-  const posts = filenames
-    .filter((f) => f.endsWith(".md"))
-    .map((filename) => {
-      const slug = filename.replace(/\.md$/, "");
-      const fullPath = path.join(postsDirectory, filename);
-      const fileContents = fs.readFileSync(fullPath, "utf8");
-      const { data, content } = matter(fileContents);
-
-      return {
-        slug,
-        title: data.title ?? slug,
-        date: data.date ? new Date(data.date).toISOString() : "",
-        excerpt: data.excerpt ?? content.slice(0, 160).replace(/#/g, "").trim(),
-        content,
-      };
-    })
-    .sort((a, b) => (b.date > a.date ? 1 : -1));
-
-  return posts;
+  return posts.map(toPostView);
 }
 
-export function getPostBySlug(slug: string): Post | undefined {
-  return getAllPosts().find((p) => p.slug === slug);
+export async function getAllPostsAdmin(userId: string): Promise<Post[]> {
+  const posts = await prisma.post.findMany({
+    where: { authorId: userId },
+    orderBy: { createdAt: "desc" },
+    include: { author: { select: { name: true, email: true } } },
+  });
+
+  return posts.map(toPostView);
+}
+
+export async function getPostBySlug(slug: string): Promise<Post | undefined> {
+  const post = await prisma.post.findFirst({
+    where: { slug, published: true },
+    include: { author: { select: { name: true, email: true } } },
+  });
+  if (!post) return undefined;
+  return toPostView(post);
+}
+
+export async function getPostById(id: string): Promise<Post | undefined> {
+  const post = await prisma.post.findUnique({
+    where: { id },
+    include: { author: { select: { name: true, email: true } } },
+  });
+  if (!post) return undefined;
+  return toPostView(post);
+}
+
+function toPostView(p: {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  category: string;
+  published: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  authorId?: string | null;
+  author?: { name: string; email: string } | null;
+}): Post {
+  return {
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+    date: p.createdAt.toISOString(),
+    excerpt: p.excerpt,
+    content: p.content,
+    category: p.category,
+    published: p.published,
+    authorId: p.authorId ?? null,
+    author: p.author
+      ? { name: p.author.name, email: p.author.email }
+      : null,
+  };
 }

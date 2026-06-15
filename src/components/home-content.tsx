@@ -9,34 +9,61 @@ import { useLang } from "@/components/language-provider";
 import { t } from "@/lib/i18n";
 import Link from "next/link";
 
+interface GitHubProjectView {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  status: "active" | "wip" | "maintained" | "archived";
+  url?: string;
+  github?: string;
+  techs: string[];
+  sortOrder: number;
+}
+
 export default function HomeContent({
   posts,
   projects,
+  githubProjects,
 }: {
   posts: Post[];
   projects: Project[];
+  githubProjects: GitHubProjectView[];
 }) {
   const { lang } = useLang();
-  const allTechs = new Set(projects.flatMap((p) => p.techs));
+
+  // Deduplicate: skip GitHub projects already synced into DB (matched by github URL)
+  const dbGithubUrls = new Set(projects.map((p) => p.github).filter(Boolean));
+  const freshGithubProjects = githubProjects.filter(
+    (p) => !dbGithubUrls.has(p.github)
+  );
+  const allProjects = [...projects, ...freshGithubProjects];
+  const allTechs = new Set(allProjects.flatMap((p) => p.techs));
+  const totalProjectCount = allProjects.length;
 
   return (
     <div className="space-y-16">
       <HeroSection
-        projectCount={projects.length}
+        projectCount={totalProjectCount}
         postCount={posts.length}
         techCount={allTechs.size}
       />
 
-      {/* Featured Projects */}
+      {/* Featured Projects — manual + GitHub */}
       <section>
         <h2 className="section-title text-base font-semibold mb-6">
           {t("featuredProjects", lang)}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {projects.map((project) => (
+          {allProjects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
         </div>
+        {allProjects.length === 0 && (
+          <p className="text-xs text-[var(--color-fg-muted)] font-mono text-center py-8">
+            {t("noPosts", lang)}
+          </p>
+        )}
       </section>
 
       {/* Latest Articles */}

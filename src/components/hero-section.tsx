@@ -12,11 +12,9 @@ interface Stat {
 
 function CountUp({ value, suffix = "" }: { value: number; suffix?: string }) {
   const [display, setDisplay] = useState(0);
-  const started = useRef(false);
+  const prevValue = useRef(value);
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
     const duration = 1200;
     const steps = 30;
     const increment = value / steps;
@@ -30,6 +28,7 @@ function CountUp({ value, suffix = "" }: { value: number; suffix?: string }) {
         setDisplay(Math.floor(current));
       }
     }, duration / steps);
+    prevValue.current = value;
     return () => clearInterval(timer);
   }, [value]);
 

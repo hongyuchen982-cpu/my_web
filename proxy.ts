@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decrypt } from "@/lib/session";
-import { cookies } from "next/headers";
 
 const protectedRoutes = ["/admin"];
-const authRoutes = ["/login", "/register"];
+const authRoutes = ["/login"];
 
 export default async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
@@ -12,8 +11,8 @@ export default async function proxy(req: NextRequest) {
   const isProtected = protectedRoutes.some((r) => path.startsWith(r));
   const isAuthRoute = authRoutes.some((r) => path.startsWith(r));
 
-  // Read session cookie
-  const cookie = (await cookies()).get("session")?.value;
+  // Read session cookie — use req.cookies in middleware, NOT cookies() from next/headers
+  const cookie = req.cookies.get("session")?.value;
   const session = await decrypt(cookie);
 
   // Redirect unauthenticated users from protected routes

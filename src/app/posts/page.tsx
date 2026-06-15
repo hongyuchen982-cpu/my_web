@@ -1,5 +1,5 @@
 import { getAllPosts } from "@/lib/posts";
-import PostsListContent from "@/components/posts-list-content";
+import BlogGrid from "@/components/blog-grid";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "All blog posts — technical articles & notes.",
 };
 
-export default function PostsPage() {
-  const posts = getAllPosts();
-  return <PostsListContent posts={posts} />;
+export default async function PostsPage() {
+  const posts = await getAllPosts();
+  return <BlogGrid posts={posts} />;
 }

@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { signup } from "@/app/actions/auth";
 import { useLang } from "@/components/language-provider";
+import { useAuth } from "@/components/auth-provider";
 import { t } from "@/lib/i18n";
 import Link from "next/link";
 import type { AuthResult } from "@/lib/validations";
@@ -13,9 +15,18 @@ const labelClass = "block text-xs font-mono text-[var(--color-fg-muted)] mb-1.5"
 
 export default function RegisterPage() {
   const { lang } = useLang();
+  const router = useRouter();
+  const { refresh: refreshAuth } = useAuth();
   const [state, action, pending] = useActionState(signup, {
     success: false,
   } as AuthResult);
+
+  // On successful registration, refresh auth state then navigate home
+  useEffect(() => {
+    if (state?.success) {
+      refreshAuth().then(() => router.push("/"));
+    }
+  }, [state?.success, router, refreshAuth]);
 
   return (
     <div className="flex items-center justify-center min-h-[65vh]">
