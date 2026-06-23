@@ -4,7 +4,6 @@ import Link from "next/link";
 import type { Post } from "@/lib/posts";
 import { useLang } from "@/components/language-provider";
 import { formatDate } from "@/lib/i18n";
-import { estimateReadTime } from "@/lib/read-time";
 
 /** Deterministic geometric SVG based on post slug + title. */
 function GeometricIcon({ seed }: { seed: string }) {
@@ -65,7 +64,7 @@ function GeometricIcon({ seed }: { seed: string }) {
 export default function PostCard({ post }: { post: Post }) {
   const { lang } = useLang();
   const date = formatDate(post.date, lang);
-  const readTime = estimateReadTime(post.content);
+  const readTime = post.readTime;
 
   return (
     <Link

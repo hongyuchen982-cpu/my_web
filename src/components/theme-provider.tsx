@@ -38,8 +38,11 @@ export default function ThemeProvider({
     if (stored === "light" || stored === "dark") {
       setThemeState(stored);
     } else {
-      // Default to dark if no stored preference
-      setThemeState("dark");
+      // Respect system preference; dark as final fallback
+      const prefersLight = window.matchMedia(
+        "(prefers-color-scheme: light)"
+      ).matches;
+      setThemeState(prefersLight ? "light" : "dark");
     }
     setMounted(true);
   }, []);

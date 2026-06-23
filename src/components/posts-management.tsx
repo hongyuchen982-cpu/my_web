@@ -12,7 +12,10 @@ const surface = "bg-[var(--color-surface)]";
 
 interface PostsManagementProps {
   posts: Post[];
-  deleteAction: (formData: FormData) => void;
+  deleteAction: (
+    _prevState: { success: boolean; message?: string },
+    formData: FormData
+  ) => Promise<{ success: boolean; message?: string }>;
 }
 
 export default function PostsManagement({

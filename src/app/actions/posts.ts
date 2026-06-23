@@ -3,33 +3,14 @@
 import { prisma } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { verifySession } from "@/lib/session";
+import { PostSchema, type ActionResult } from "@/lib/validations";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
-
-const PostSchema = z.object({
-  title: z.string().min(1, "标题不能为空").trim(),
-  slug: z
-    .string()
-    .min(1, "Slug 不能为空")
-    .regex(/^[a-z0-9-]+$/, "Slug 只能包含小写字母、数字和连字符")
-    .trim(),
-  excerpt: z.string().trim().optional(),
-  content: z.string().optional(),
-  category: z.string().trim().optional(),
-  published: z.boolean().optional(),
-});
-
-export type PostActionResult = {
-  errors?: Record<string, string[]>;
-  message?: string;
-  success: boolean;
-};
 
 export async function createPost(
-  _prevState: PostActionResult,
+  _prevState: ActionResult,
   formData: FormData
-): Promise<PostActionResult> {
+): Promise<ActionResult> {
   const session = await verifySession();
 
   const validated = PostSchema.safeParse({
@@ -62,7 +43,7 @@ export async function createPost(
     data: {
       title,
       slug,
-      excerpt: excerpt ?? "",
+      excerpt: excerpt || (content ? content.slice(0, 160).replace(/#/g, "").trim() : ""),
       content: content ?? "",
       category: category ?? "",
       published: published ?? false,
@@ -76,19 +57,20 @@ export async function createPost(
 }
 
 export async function updatePost(
-  _prevState: PostActionResult,
+  _prevState: ActionResult,
   formData: FormData
-): Promise<PostActionResult> {
+): Promise<ActionResult> {
   const session = await verifySession();
 
-  const id = formData.get("id") as string;
+  const rawId = formData.get("id");
+  const id = typeof rawId === "string" ? rawId : "";
   if (!id) {
     return { message: "缺少文章 ID", success: false };
   }
 
-  // Ownership check
+  // Ownership check (null authorId = legacy data, allowed)
   const existingPost = await prisma.post.findUnique({ where: { id } });
-  if (!existingPost || existingPost.authorId !== session.userId) {
+  if (!existingPost || (existingPost.authorId && existingPost.authorId !== session.userId)) {
     return { message: "文章不存在或无权编辑", success: false };
   }
 
@@ -125,21 +107,20 @@ export async function updatePost(
       data: {
         title,
         slug,
-        excerpt: excerpt ?? "",
+        excerpt: excerpt || (content ? content.slice(0, 160).replace(/#/g, "").trim() : ""),
         content: content ?? "",
         category: category ?? "",
         published: published ?? false,
       },
     });
   } catch (e) {
-    if (
-      e instanceof Prisma.PrismaClientKnownRequestError &&
-      e.code === "P2002"
-    ) {
-      return {
-        errors: { slug: ["该 Slug 已被使用"] },
-        success: false,
-      };
+    if (e instanceof Prisma.PrismaClientKnownRequestError) {
+      if (e.code === "P2002") {
+        return { errors: { slug: ["该 Slug 已被使用"] }, success: false };
+      }
+      if (e.code === "P2025") {
+        return { message: "文章不存在或已被删除", success: false };
+      }
     }
     throw e;
   }
@@ -150,15 +131,19 @@ export async function updatePost(
   redirect("/admin/posts");
 }
 
-export async function deletePost(formData: FormData) {
+export async function deletePost(
+  _prevState: { success: boolean; message?: string },
+  formData: FormData
+) {
   const session = await verifySession();
 
-  const id = formData.get("id") as string;
+  const rawId = formData.get("id");
+  const id = typeof rawId === "string" ? rawId : "";
   if (!id) return { success: false, message: "缺少文章 ID" };
 
   // Ownership check
   const existingPost = await prisma.post.findUnique({ where: { id } });
-  if (!existingPost || existingPost.authorId !== session.userId) {
+  if (!existingPost || (existingPost.authorId && existingPost.authorId !== session.userId)) {
     return { success: false, message: "文章不存在或无权删除" };
   }
 

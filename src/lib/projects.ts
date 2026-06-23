@@ -12,8 +12,21 @@ export interface Project {
   sortOrder: number;
 }
 
+export async function getProjectCount(): Promise<number> {
+  return prisma.project.count();
+}
+
 export async function getProjects(): Promise<Project[]> {
   const projects = await prisma.project.findMany({
+    orderBy: { sortOrder: "asc" },
+  });
+
+  return projects.map(toProjectView);
+}
+
+export async function getProjectsAdmin(userId: string): Promise<Project[]> {
+  const projects = await prisma.project.findMany({
+    where: { OR: [{ authorId: userId }, { authorId: null }] },
     orderBy: { sortOrder: "asc" },
   });
 
@@ -25,6 +38,17 @@ export async function getProjectById(
 ): Promise<Project | undefined> {
   const project = await prisma.project.findUnique({ where: { id } });
   if (!project) return undefined;
+  return toProjectView(project);
+}
+
+export async function getProjectByIdForUser(
+  id: string,
+  userId: string
+): Promise<Project | undefined> {
+  const project = await prisma.project.findUnique({ where: { id } });
+  if (!project) return undefined;
+  // Allow access only if user owns it or it's legacy data (null authorId)
+  if (project.authorId && project.authorId !== userId) return undefined;
   return toProjectView(project);
 }
 

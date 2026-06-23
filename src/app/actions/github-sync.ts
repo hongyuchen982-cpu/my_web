@@ -74,6 +74,7 @@ export async function syncGitHubProjects(): Promise<SyncResult> {
       }
     }
 
+    revalidatePath("/");
     revalidatePath("/projects");
     revalidatePath("/admin");
     revalidatePath("/admin/projects");

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { estimateReadTime } from "@/lib/read-time";
 
 export interface Author {
   name: string;
@@ -14,14 +15,22 @@ export interface Post {
   content: string;
   category: string;
   published: boolean;
+  readTime: string;
   authorId?: string | null;
   author?: Author | null;
 }
 
-export async function getAllPosts(): Promise<Post[]> {
+export async function getPostCount(userId?: string): Promise<number> {
+  return prisma.post.count({
+    where: userId ? { authorId: userId } : { published: true },
+  });
+}
+
+export async function getAllPosts(limit?: number): Promise<Post[]> {
   const posts = await prisma.post.findMany({
     where: { published: true },
     orderBy: { createdAt: "desc" },
+    take: limit,
     include: { author: { select: { name: true, email: true } } },
   });
 
@@ -78,6 +87,7 @@ function toPostView(p: {
     content: p.content,
     category: p.category,
     published: p.published,
+    readTime: estimateReadTime(p.content),
     authorId: p.authorId ?? null,
     author: p.author
       ? { name: p.author.name, email: p.author.email }

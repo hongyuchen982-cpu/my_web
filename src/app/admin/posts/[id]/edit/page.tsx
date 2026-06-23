@@ -8,10 +8,11 @@ export default async function EditPostPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await verifySession();
+  const session = await verifySession();
   const { id } = await params;
   const post = await getPostById(id);
-  if (!post) notFound();
+  // Block access if post belongs to another user (null = legacy, allowed)
+  if (!post || (post.authorId && post.authorId !== session.userId)) notFound();
 
   return (
     <EditPostForm

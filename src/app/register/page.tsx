@@ -9,9 +9,7 @@ import { t } from "@/lib/i18n";
 import Link from "next/link";
 import type { AuthResult } from "@/lib/validations";
 
-const inputClass =
-  "w-full px-3.5 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-fg)] placeholder-[var(--color-fg-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 focus:ring-1 focus:ring-[var(--color-accent)]/20 transition-all font-mono";
-const labelClass = "block text-xs font-mono text-[var(--color-fg-muted)] mb-1.5";
+import { inputClass, labelClass } from "@/lib/styles";
 
 export default function RegisterPage() {
   const { lang } = useLang();

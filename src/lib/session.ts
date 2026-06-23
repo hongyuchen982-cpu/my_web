@@ -14,6 +14,7 @@ export interface SessionPayload {
   userId: string;
   email: string;
   name: string;
+  /** ISO 8601 timestamp (deserialized from JWT JSON — NOT a Date object at runtime) */
   expiresAt: Date;
 }
 
@@ -81,11 +82,9 @@ export async function verifySession(): Promise<SessionPayload> {
     redirect("/login");
   }
 
-  // Check if session is expired
-  if (new Date(session.expiresAt) < new Date()) {
-    redirect("/login");
-  }
-
+  // Note: JWT expiration is already validated by jwtVerify in decrypt().
+  // An expired or tampered token causes decrypt() to return null,
+  // which is caught by the !session?.userId check above.
   return session;
 }
 
@@ -95,7 +94,6 @@ export async function getSession(): Promise<SessionPayload | null> {
     const session = await decrypt(cookie);
 
     if (!session?.userId) return null;
-    if (new Date(session.expiresAt) < new Date()) return null;
 
     return session;
   } catch {

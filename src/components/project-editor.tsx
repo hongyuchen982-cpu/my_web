@@ -4,9 +4,7 @@ import { useState } from "react";
 import { useLang } from "@/components/language-provider";
 import { t } from "@/lib/i18n";
 
-const inputClass =
-  "w-full px-3.5 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-fg)] placeholder-[var(--color-fg-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 focus:ring-1 focus:ring-[var(--color-accent)]/20 transition-all font-mono";
-const labelClass = "block text-xs font-mono text-[var(--color-fg-muted)] mb-1.5";
+import { inputClass, labelClass } from "@/lib/styles";
 
 interface ProjectEditorProps {
   initialTitle?: string;

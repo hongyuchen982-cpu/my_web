@@ -1,5 +1,5 @@
 import { verifySession } from "@/lib/session";
-import { getProjectById } from "@/lib/projects";
+import { getProjectByIdForUser } from "@/lib/projects";
 import { notFound } from "next/navigation";
 import EditProjectForm from "./edit-project-form";
 
@@ -8,9 +8,9 @@ export default async function EditProjectPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await verifySession();
+  const session = await verifySession();
   const { id } = await params;
-  const project = await getProjectById(id);
+  const project = await getProjectByIdForUser(id, session.userId);
   if (!project) notFound();
 
   return (

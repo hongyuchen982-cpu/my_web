@@ -80,3 +80,29 @@ export function repoToProjectView(repo: GitHubRepo) {
     sortOrder: 0,
   };
 }
+
+export interface GitHubProjectView {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  status: "active" | "wip" | "maintained" | "archived";
+  url?: string;
+  github?: string;
+  techs: string[];
+  sortOrder: number;
+}
+
+/** Merge DB projects with GitHub projects, deduplicating by github URL. */
+export function mergeProjects<T extends { github?: string | null }>(
+  dbProjects: T[],
+  githubProjects: GitHubProjectView[]
+): (T | GitHubProjectView)[] {
+  const dbGithubUrls = new Set(
+    dbProjects.map((p) => p.github).filter(Boolean) as string[]
+  );
+  const freshGithubProjects = githubProjects.filter(
+    (p) => !dbGithubUrls.has(p.github!)
+  );
+  return [...dbProjects, ...freshGithubProjects];
+}

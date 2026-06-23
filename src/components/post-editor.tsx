@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useDeferredValue } from "react";
 import MDXContent from "@/components/mdx-content";
 import { useLang } from "@/components/language-provider";
 import { t } from "@/lib/i18n";
 
-const inputClass =
-  "w-full px-3.5 py-2.5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-fg)] placeholder-[var(--color-fg-muted)] focus:outline-none focus:border-[var(--color-accent)]/50 focus:ring-1 focus:ring-[var(--color-accent)]/20 transition-all font-mono";
-const labelClass = "block text-xs font-mono text-[var(--color-fg-muted)] mb-1.5";
+import { inputClass, labelClass } from "@/lib/styles";
 
 interface PostEditorProps {
   initialTitle?: string;
@@ -36,6 +34,9 @@ export default function PostEditor({
   const [category, setCategory] = useState(initialCategory);
   const [published, setPublished] = useState(initialPublished);
 
+  // Track whether user has manually edited the slug (if so, stop auto-generating)
+  const slugManuallyEdited = useRef(false);
+
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -49,6 +50,9 @@ export default function PostEditor({
     preview.scrollTop =
       ratio * (preview.scrollHeight - preview.clientHeight);
   }, []);
+
+  // Defer preview rendering to avoid re-parsing Markdown on every keystroke
+  const deferredContent = useDeferredValue(content);
 
   const generateSlug = useCallback((t: string) => {
     const s = t
@@ -64,9 +68,15 @@ export default function PostEditor({
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
     setTitle(newTitle);
-    if (!initialSlug || slug === generateSlug(initialTitle)) {
+    // Auto-generate slug from title only if user hasn't manually edited it
+    if (!slugManuallyEdited.current) {
       setSlug(generateSlug(newTitle));
     }
+  };
+
+  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSlug(e.target.value);
+    slugManuallyEdited.current = true;
   };
 
   // Tab key support in textarea
@@ -115,7 +125,7 @@ export default function PostEditor({
             type="text"
             required
             value={slug}
-            onChange={(e) => setSlug(e.target.value)}
+            onChange={handleSlugChange}
             className={inputClass}
             placeholder="my-post-slug"
             pattern="^[a-z0-9-]+$"
@@ -199,8 +209,8 @@ export default function PostEditor({
                 PREVIEW
               </span>
             </div>
-            {content ? (
-              <MDXContent content={content} />
+            {deferredContent ? (
+              <MDXContent content={deferredContent} />
             ) : (
               <p className="text-sm text-[var(--color-fg-muted)] font-mono mt-8 text-center">
                 {lang === "zh"

@@ -5,7 +5,7 @@ import HomeContent from "@/components/home-content";
 
 export default async function Home() {
   const [posts, dbProjects, ghRepos] = await Promise.all([
-    getAllPosts(),
+    getAllPosts(5),
     getProjects(),
     fetchGitHubRepos(),
   ]);

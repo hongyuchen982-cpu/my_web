@@ -4,14 +4,13 @@ import type { Post } from "@/lib/posts";
 import MDXContent from "@/components/mdx-content";
 import { useLang } from "@/components/language-provider";
 import { formatDate, t } from "@/lib/i18n";
-import { estimateReadTime } from "@/lib/read-time";
 import Link from "next/link";
 import { ArrowLeft, Clock, User } from "lucide-react";
 
 export default function PostDetailContent({ post }: { post: Post }) {
   const { lang } = useLang();
   const date = formatDate(post.date, lang, "long");
-  const readTime = estimateReadTime(post.content);
+  const readTime = post.readTime;
 
   return (
     <article className="max-w-2xl mx-auto">

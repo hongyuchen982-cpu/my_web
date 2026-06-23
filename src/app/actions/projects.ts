@@ -2,31 +2,14 @@
 
 import { prisma } from "@/lib/db";
 import { verifySession } from "@/lib/session";
+import { ProjectSchema, type ActionResult } from "@/lib/validations";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
-
-const ProjectSchema = z.object({
-  title: z.string().min(1, "标题不能为空").trim(),
-  description: z.string().trim().optional(),
-  category: z.string().trim().optional(),
-  status: z.string().optional(),
-  url: z.string().trim().optional(),
-  github: z.string().trim().optional(),
-  techs: z.string().optional(),
-  sortOrder: z.coerce.number().optional(),
-});
-
-export type ProjectActionResult = {
-  errors?: Record<string, string[]>;
-  message?: string;
-  success: boolean;
-};
 
 export async function createProject(
-  _prevState: ProjectActionResult,
+  _prevState: ActionResult,
   formData: FormData
-): Promise<ProjectActionResult> {
+): Promise<ActionResult> {
   const session = await verifySession();
 
   const validated = ProjectSchema.safeParse({
@@ -69,19 +52,20 @@ export async function createProject(
 }
 
 export async function updateProject(
-  _prevState: ProjectActionResult,
+  _prevState: ActionResult,
   formData: FormData
-): Promise<ProjectActionResult> {
+): Promise<ActionResult> {
   const session = await verifySession();
 
-  const id = formData.get("id") as string;
+  const rawId = formData.get("id");
+  const id = typeof rawId === "string" ? rawId : "";
   if (!id) {
     return { message: "缺少项目 ID", success: false };
   }
 
-  // Ownership check
+  // Ownership check (null authorId = legacy data, allowed)
   const existingProject = await prisma.project.findUnique({ where: { id } });
-  if (!existingProject || existingProject.authorId !== session.userId) {
+  if (!existingProject || (existingProject.authorId && existingProject.authorId !== session.userId)) {
     return { message: "项目不存在或无权编辑", success: false };
   }
 
@@ -124,15 +108,19 @@ export async function updateProject(
   redirect("/admin/projects");
 }
 
-export async function deleteProject(formData: FormData) {
+export async function deleteProject(
+  _prevState: { success: boolean; message?: string },
+  formData: FormData
+) {
   const session = await verifySession();
 
-  const id = formData.get("id") as string;
+  const rawId = formData.get("id");
+  const id = typeof rawId === "string" ? rawId : "";
   if (!id) return { success: false, message: "缺少项目 ID" };
 
   // Ownership check
   const existingProject = await prisma.project.findUnique({ where: { id } });
-  if (!existingProject || existingProject.authorId !== session.userId) {
+  if (!existingProject || (existingProject.authorId && existingProject.authorId !== session.userId)) {
     return { success: false, message: "项目不存在或无权删除" };
   }
 

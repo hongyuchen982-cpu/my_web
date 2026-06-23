@@ -7,9 +7,13 @@ const authRoutes = ["/login"];
 export default async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
-  // Check if route is protected
-  const isProtected = protectedRoutes.some((r) => path.startsWith(r));
-  const isAuthRoute = authRoutes.some((r) => path.startsWith(r));
+  // Check if route is protected — match "/admin" or "/admin/..." (not "/admin-something")
+  const isProtected = protectedRoutes.some(
+    (r) => path === r || path.startsWith(r + "/")
+  );
+  const isAuthRoute = authRoutes.some(
+    (r) => path === r || path.startsWith(r + "/")
+  );
 
   // Read session cookie — use req.cookies in middleware, NOT cookies() from next/headers
   const cookie = req.cookies.get("session")?.value;

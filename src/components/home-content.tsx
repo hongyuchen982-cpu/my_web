@@ -8,18 +8,7 @@ import ArticleListItem from "@/components/article-list-item";
 import { useLang } from "@/components/language-provider";
 import { t } from "@/lib/i18n";
 import Link from "next/link";
-
-interface GitHubProjectView {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  status: "active" | "wip" | "maintained" | "archived";
-  url?: string;
-  github?: string;
-  techs: string[];
-  sortOrder: number;
-}
+import { mergeProjects, type GitHubProjectView } from "@/lib/github";
 
 export default function HomeContent({
   posts,
@@ -32,12 +21,7 @@ export default function HomeContent({
 }) {
   const { lang } = useLang();
 
-  // Deduplicate: skip GitHub projects already synced into DB (matched by github URL)
-  const dbGithubUrls = new Set(projects.map((p) => p.github).filter(Boolean));
-  const freshGithubProjects = githubProjects.filter(
-    (p) => !dbGithubUrls.has(p.github)
-  );
-  const allProjects = [...projects, ...freshGithubProjects];
+  const allProjects = mergeProjects(projects, githubProjects);
   const allTechs = new Set(allProjects.flatMap((p) => p.techs));
   const totalProjectCount = allProjects.length;
 

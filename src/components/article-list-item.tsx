@@ -4,14 +4,13 @@ import Link from "next/link";
 import type { Post } from "@/lib/posts";
 import { useLang } from "@/components/language-provider";
 import { formatDate } from "@/lib/i18n";
-import { estimateReadTime } from "@/lib/read-time";
 
 const border = "border-[var(--color-border)]";
 
 export default function ArticleListItem({ post }: { post: Post }) {
   const { lang } = useLang();
   const date = formatDate(post.date, lang);
-  const readTime = estimateReadTime(post.content);
+  const readTime = post.readTime;
 
   return (
     <Link

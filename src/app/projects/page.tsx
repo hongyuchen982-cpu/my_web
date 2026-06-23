@@ -1,5 +1,5 @@
 import { getProjects } from "@/lib/projects";
-import { fetchGitHubRepos, repoToProjectView } from "@/lib/github";
+import { fetchGitHubRepos, repoToProjectView, mergeProjects } from "@/lib/github";
 import ProjectCard from "@/components/project-card";
 import type { Metadata } from "next";
 
@@ -15,13 +15,7 @@ export default async function ProjectsPage() {
   ]);
 
   const githubProjects = ghRepos.map(repoToProjectView);
-
-  // Deduplicate: skip GitHub projects already synced into DB (matched by github URL)
-  const dbGithubUrls = new Set(dbProjects.map((p) => p.github).filter(Boolean));
-  const freshGithubProjects = githubProjects.filter(
-    (p) => !dbGithubUrls.has(p.github)
-  );
-  const allProjects = [...dbProjects, ...freshGithubProjects];
+  const allProjects = mergeProjects(dbProjects, githubProjects);
 
   return (
     <div className="space-y-8">

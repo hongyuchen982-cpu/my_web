@@ -2,7 +2,7 @@
 
 import { useLang } from "@/components/language-provider";
 import { t } from "@/lib/i18n";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Stat {
   label: string;
@@ -12,7 +12,6 @@ interface Stat {
 
 function CountUp({ value, suffix = "" }: { value: number; suffix?: string }) {
   const [display, setDisplay] = useState(0);
-  const prevValue = useRef(value);
 
   useEffect(() => {
     const duration = 1200;
@@ -28,7 +27,6 @@ function CountUp({ value, suffix = "" }: { value: number; suffix?: string }) {
         setDisplay(Math.floor(current));
       }
     }, duration / steps);
-    prevValue.current = value;
     return () => clearInterval(timer);
   }, [value]);
 
