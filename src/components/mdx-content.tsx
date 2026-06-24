@@ -14,10 +14,9 @@ function Blockquote({ children }: ComponentPropsWithoutRef<"blockquote">) {
 }
 
 function CodeSpan({ children }: ComponentPropsWithoutRef<"code">) {
-  if (!children) return null;
   return (
     <code className={`${surface} text-[var(--color-accent)] rounded px-1.5 py-0.5 text-[0.88em] font-mono before:content-none after:content-none border ${border}`}>
-      {children}
+      {children ?? ""}
     </code>
   );
 }
@@ -70,6 +69,7 @@ const components = {
 };
 
 export default function MDXContent({ content }: { content: string }) {
+  if (!content) return null;
   return (
     <div className="max-w-none">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>

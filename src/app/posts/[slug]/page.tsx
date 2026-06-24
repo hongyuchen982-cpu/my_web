@@ -3,8 +3,13 @@ import { getAllPosts, getPostBySlug } from "@/lib/posts";
 import PostDetailContent from "@/components/post-detail-content";
 
 export async function generateStaticParams() {
-  const posts = await getAllPosts();
-  return posts.map((post) => ({ slug: post.slug }));
+  try {
+    const posts = await getAllPosts();
+    return posts.map((post) => ({ slug: post.slug }));
+  } catch (error) {
+    console.error("[build] generateStaticParams failed:", error);
+    return [];
+  }
 }
 
 export async function generateMetadata({

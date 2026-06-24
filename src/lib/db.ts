@@ -1,27 +1,34 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-  adapter: PrismaLibSql | undefined;
-};
+let _prisma: PrismaClient | undefined;
 
-const adapter =
-  globalForPrisma.adapter ??
-  new PrismaLibSql({
+function createPrisma(): PrismaClient {
+  const adapter = new PrismaLibSql({
     url:
       process.env.TURSO_DATABASE_URL ||
       process.env.DATABASE_URL ||
       "file:./dev.db",
     authToken: process.env.TURSO_AUTH_TOKEN || undefined,
   });
-
-if (!globalForPrisma.adapter) {
-  globalForPrisma.adapter = adapter;
+  return new PrismaClient({ adapter });
 }
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+function getPrisma(): PrismaClient {
+  if (!_prisma) {
+    _prisma = createPrisma();
+  }
+  return _prisma;
 }
+
+// Proxy：透明懒加载，不改任何调用方
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    const client = getPrisma();
+    const value = Reflect.get(client, prop, receiver);
+    if (typeof value === "function") {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
