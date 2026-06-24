@@ -17,11 +17,16 @@ export async function getProjectCount(): Promise<number> {
 }
 
 export async function getProjects(): Promise<Project[]> {
-  const projects = await prisma.project.findMany({
-    orderBy: { sortOrder: "asc" },
-  });
+  try {
+    const projects = await prisma.project.findMany({
+      orderBy: { sortOrder: "asc" },
+    });
 
-  return projects.map(toProjectView);
+    return projects.map(toProjectView);
+  } catch (error) {
+    console.warn("[projects] getProjects failed, returning []:", (error as Error).message);
+    return [];
+  }
 }
 
 export async function getProjectsAdmin(userId: string): Promise<Project[]> {

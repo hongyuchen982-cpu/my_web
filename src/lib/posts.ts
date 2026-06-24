@@ -27,14 +27,19 @@ export async function getPostCount(userId?: string): Promise<number> {
 }
 
 export async function getAllPosts(limit?: number): Promise<Post[]> {
-  const posts = await prisma.post.findMany({
-    where: { published: true },
-    orderBy: { createdAt: "desc" },
-    take: limit,
-    include: { author: { select: { name: true, email: true } } },
-  });
+  try {
+    const posts = await prisma.post.findMany({
+      where: { published: true },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      include: { author: { select: { name: true, email: true } } },
+    });
 
-  return posts.map(toPostView);
+    return posts.map(toPostView);
+  } catch (error) {
+    console.warn("[posts] getAllPosts failed, returning []:", (error as Error).message);
+    return [];
+  }
 }
 
 export async function getAllPostsAdmin(userId: string): Promise<Post[]> {
@@ -48,12 +53,17 @@ export async function getAllPostsAdmin(userId: string): Promise<Post[]> {
 }
 
 export async function getPostBySlug(slug: string): Promise<Post | undefined> {
-  const post = await prisma.post.findFirst({
-    where: { slug, published: true },
-    include: { author: { select: { name: true, email: true } } },
-  });
-  if (!post) return undefined;
-  return toPostView(post);
+  try {
+    const post = await prisma.post.findFirst({
+      where: { slug, published: true },
+      include: { author: { select: { name: true, email: true } } },
+    });
+    if (!post) return undefined;
+    return toPostView(post);
+  } catch (error) {
+    console.warn("[posts] getPostBySlug failed:", (error as Error).message);
+    return undefined;
+  }
 }
 
 export async function getPostById(id: string): Promise<Post | undefined> {
