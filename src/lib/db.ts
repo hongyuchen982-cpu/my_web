@@ -9,7 +9,11 @@ const globalForPrisma = globalThis as unknown as {
 const adapter =
   globalForPrisma.adapter ??
   new PrismaLibSql({
-    url: process.env.DATABASE_URL ?? "file:dev.db",
+    url:
+      process.env.TURSO_DATABASE_URL ||
+      process.env.DATABASE_URL ||
+      "file:./dev.db",
+    authToken: process.env.TURSO_AUTH_TOKEN || undefined,
   });
 
 if (!globalForPrisma.adapter) {
