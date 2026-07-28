@@ -6,6 +6,7 @@ import AuthProvider from "@/components/auth-provider";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
 import SplashScreen from "@/components/splash-screen";
+import ChatWidget from "@/components/chat-widget";
 
 export const metadata: Metadata = {
   title: {
@@ -37,6 +38,7 @@ export default function RootLayout({
                 {children}
               </main>
               <Footer />
+              <ChatWidget />
             </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>

@@ -12,10 +12,23 @@ model User {
   email        String   @unique
   name         String
   passwordHash String
+  role         String   @default("user")
+  canUseAI     Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   posts        Post[]
   projects     Project[]
+  aiCallLogs   AICallLog[]
+}
+
+model AICallLog {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  date   String
+  count  Int    @default(0)
+
+  @@unique([userId, date])
 }
 
 model Post {

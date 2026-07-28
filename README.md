@@ -1,93 +1,127 @@
 # ~/chy — 个人技术实验室
 
-## 这个网站是什么
+## 这是什么
 
-这是我的个人技术博客和项目展示平台。它不只是一个静态页面，而是一个**全栈 Web 应用**——可以注册账号、登录、发表文章、展示项目。
+全栈个人博客 & 项目展示平台。注册登录、写 Markdown 文章、展示项目、AI 问答——全部在一个 Next.js 应用里跑。
 
-建这个站的初衷很简单：我需要一个属于自己的角落，能写字、能展示作品、能折腾技术。
+## 已完成 ✅
 
-## 目前已经有的功能
+### 核心功能
+- 🎨 暗色/亮色主题，刷新不丢失
+- 🎬 赛博朋克开屏动画
+- 📝 在线 Markdown 编辑器（后台实时预览）
+- 👤 邮箱注册 + JWT 登录
+- 🛡️ 管理后台（路由保护 + 权限校验）
+- 🌐 中/英文切换
+- 📊 首页动态统计
 
-- 🎨 **亮色 / 暗色自由切换**——默认暗色，点击按钮切亮色，刷新记住选择
-- 🎬 **开屏动画**——进入网站先看到一个「INITIALIZING SYSTEM...」的打字动画，点击「Enter Lab」进入主页
-- 📝 **Markdown 博客**——往 `posts/` 文件夹扔 `.md` 文件就能发布文章，不需要后台编辑器
-- 👤 **邮箱注册 + 登录**——真实的数据库存储，密码用 bcrypt 加密，JWT 维持登录状态
-- 🛡️ **管理后台**——`/admin` 路由受保护，未登录自动跳转登录页
-- 🌐 **中英文切换**——导航栏一键切换语言
-- 📊 **首页统计**——项目数、文章数、技术栈数量动态展示
+### AI 对话（RAG）
+- 🤖 **右下角浮动 AI 聊天**——点 🐶 按钮打开
+- 🔍 **中文二元组分词检索**——12 篇文章 + 5 个项目作为知识库
+- 🧠 **DeepSeek / 硅基流动 / Groq / Gemini 多模型**——聊天窗口顶部下拉切换
+- 🔐 **AI 独立权限**——`canUseAI` 字段控制谁能用
+- ⏱️ **每日 20 次限制**——`AICallLog` 表追踪
+- 🚫 **未登录 401 / 无权限 403 / 超次数 429**——全部后端校验
+
+### 数据库
+- 🗄️ **Turso 云数据库**（libSQL）——Vercel Serverless 兼容
+- 📦 **本地 SQLite**——开发环境自动回退
+- 🔄 **一键迁移脚本**——`scripts/migrate-to-turso.ts`
+
+### 基础设施
+- ✅ TypeScript 全栈类型安全
+- ✅ Turbopack 构建（Next.js 16）
+- ✅ Vercel 部署
+- ✅ `/api/debug` 诊断接口
 
 ## 技术栈
 
-| 层     | 技术                            |
-| ------ | ------------------------------- |
-| 框架   | Next.js 16 (App Router)         |
-| 样式   | Tailwind CSS 4 + CSS 自定义属性 |
-| 动画   | framer-motion                   |
-| 数据库 | SQLite (Prisma 7 ORM)           |
-| 认证   | JWT (jose) + bcryptjs           |
-| 校验   | Zod                             |
-| 博客   | gray-matter + react-markdown    |
-| 图标   | lucide-react                    |
-| 部署   | Vercel                          |
+| 层 | 技术 |
+|------|------|
+| 框架 | Next.js 16 (App Router + Turbopack) |
+| 样式 | Tailwind CSS 4 + CSS 自定义属性 |
+| 动画 | framer-motion |
+| 数据库 | Turso (libSQL) + SQLite，Prisma 7 ORM |
+| 认证 | JWT (jose) + bcryptjs |
+| AI | DeepSeek / 硅基流动 / Groq / Gemini — 多模型切换 |
+| RAG | 中文 bigram 分词 + 关键词评分匹配 |
+| 校验 | Zod |
+| 博客 | react-markdown + remark-gfm |
+| 图标 | lucide-react |
+| 部署 | Vercel |
 
 ## 本地运行
 
 ```bash
 npm install
-npx prisma migrate dev --name init
 npx prisma generate
 npm run dev
 ```
 
-打开 http://localhost:3000
+打开 http://localhost:3000，注册账号即可使用。
 
-## 我还想做什么
+## 环境变量
 
-下面是我对这个网站的后续想法，慢慢来，想到就加：
+`.env` 文件需配置：
 
-### 内容与写作
-- [ ] **分类系统**——目前不完善
-- [ ] **全文搜索**——搜索文章标题和内容
-- [ ] **github转移**——将github的内容移植进我的网站，并且再次分类
-- [ ] **阅读时长估算**——类似 Medium 的「预计阅读 5 分钟」
-- [ ] **代码块复制按钮**——一键复制代码块内容
-- [ ] **文章置顶**——某些文章固定在列表顶部
-- [ ] 更改开屏动画
+```env
+# 数据库（Turso 生产，SQLite 本地）
+TURSO_DATABASE_URL="libsql://xxx.turso.io"
+TURSO_AUTH_TOKEN="your-token"
+DATABASE_URL="file:./dev.db"
 
-### 项目展示
-- [ ] **接入 GitHub API**——自动拉取 GitHub 仓库信息，不用手动更新项目数据
-- [ ] **项目详情页**——每个项目点进去有完整的 README 渲染
-- [ ] **在线 Demo 嵌入**——项目卡片里直接嵌入 iframe 预览
+# JWT
+SESSION_SECRET="随机32位字符串"
 
-### 交互与体验
-- [ ] **页面过渡动画**——路由切换时有平滑的过渡效果
-- [ ] **开屏自定义视频**——替换现在的纯代码动画，放一段自己的视频
-- [ ] **回到顶部按钮**——文章读到底一键回顶
-- [ ] **阅读进度条**——页面顶部显示阅读进度
-- [ ] **评论系统**——接入 Giscus 或自己实现
-- [ ] **RSS 订阅**——生成 RSS Feed，别人可以订阅
+# AI（改 AI_PROVIDER 切换模型）
+AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY="sk-xxx"
+SILICONFLOW_API_KEY="sk-xxx"    # 可选
+GROQ_API_KEY="gsk_xxx"          # 可选
+GEMINI_API_KEY="xxx"            # 可选
+```
 
-### 后台管理
-- [ ] **在线 Markdown 编辑器**——在 `/admin` 里直接写文章、预览、发布
-- [ ] **文章草稿功能**——草稿状态的文章不显示在前台
-- [ ] **图片上传**——粘贴或拖拽图片自动上传到 CDN
-- [ ] **访问统计**——文章阅读量、网站 PV/UV
-- [ ] **媒体库**——统一管理上传的图片和文件
+## 项目结构
 
-### 工程化
-- [ ] **单元测试**——核心逻辑加测试覆盖
-- [ ] **CI/CD**——GitHub Actions 自动构建部署
-- [ ] **PostgreSQL 迁移**——用户量大了从 SQLite 切到 PostgreSQL
-- [ ] **Docker 化**——一键 `docker compose up` 启动
+```
+src/
+├── app/
+│   ├── actions/          # Server Actions（auth/posts/projects/github）
+│   ├── admin/            # 管理后台
+│   ├── api/
+│   │   ├── chat/         # AI 聊天 + 模型列表
+│   │   ├── debug/        # 诊断接口
+│   │   ├── logout/       # 登出
+│   │   └── session/      # 会话检查
+│   ├── login/            # 登录页
+│   ├── register/         # 注册页
+│   ├── posts/            # 博客列表 & 详情
+│   └── projects/         # 项目展示
+├── components/
+│   ├── chat-widget.tsx   # 右下角 AI 聊天窗口
+│   ├── mdx-content.tsx   # Markdown 渲染
+│   ├── admin-dashboard.tsx
+│   └── ...
+├── lib/
+│   ├── ai.ts             # 多模型适配（DeepSeek/硅基/Groq/Gemini）
+│   ├── ai-permission.ts  # AI 权限 + 次数限制
+│   ├── search.ts         # RAG 中文 bigram 搜索
+│   ├── db.ts             # Prisma 懒加载客户端
+│   ├── session.ts        # JWT 签发/校验
+│   ├── posts.ts          # 文章查询
+│   ├── projects.ts       # 项目查询
+│   ├── github.ts         # GitHub API
+│   ├── i18n.ts           # 中英文翻译
+│   └── validations.ts    # Zod 校验
+├── generated/prisma/     # Prisma 生成的类型安全客户端
+prisma/
+├── schema.prisma         # 数据模型（User/Post/Project/AICallLog）
+└── migrations/           # 数据库迁移历史
+scripts/
+└── migrate-to-turso.ts   # 本地 → Turso 数据迁移
+proxy.ts                  # 路由中间件（权限保护）
+```
 
-### 脑洞
-- [ ] **AI 写作助手**——接 OpenAI API，帮忙润色文章
-- [ ] **终端风格主题**——给网站加一个命令行风格的皮肤
-- [ ] **访客地图**——显示最近访问的地理位置（不侵犯隐私的前提下）
-- [ ] **时光机**——按年份归档所有文章，像翻日记一样
+## License
 
----
-
-这些想法有些很快就能做，有些需要时间沉淀。这个 README 会跟着网站一起成长。
-
-**yes,sir**
+MIT
