@@ -2,11 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import ThemeProvider from "@/components/theme-provider";
 import LanguageProvider from "@/components/language-provider";
-import AuthProvider from "@/components/auth-provider";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
-import SplashScreen from "@/components/splash-screen";
-import ChatWidget from "@/components/chat-widget";
 
 export const metadata: Metadata = {
   title: {
@@ -31,15 +28,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-[var(--color-bg)] text-[var(--color-fg)] bg-grid transition-colors duration-400">
         <ThemeProvider>
           <LanguageProvider>
-            <AuthProvider>
-              <SplashScreen />
-              <Header />
-              <main className="flex-1 mx-auto w-full max-w-4xl px-6 py-10">
-                {children}
-              </main>
-              <Footer />
-              <ChatWidget />
-            </AuthProvider>
+            <Header />
+            <main className="flex-1 mx-auto w-full max-w-4xl px-6 py-10">
+              {children}
+            </main>
+            <Footer />
           </LanguageProvider>
         </ThemeProvider>
       </body>
