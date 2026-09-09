@@ -1,111 +1,122 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { Post } from "@/lib/posts";
 import PostCard from "@/components/post-card";
 import { useLang } from "@/components/language-provider";
-import { t } from "@/lib/i18n";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 
 export default function BlogGrid({ posts }: { posts: Post[] }) {
   const { lang } = useLang();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
 
-  // Derive unique categories from posts
   const categories = useMemo(() => {
-    const cats = new Set<string>();
-    posts.forEach((p) => {
-      if (p.category) cats.add(p.category);
-    });
-    return ["All", ...Array.from(cats)];
+    const categoryNames = posts
+      .map((post) => post.category)
+      .filter((category): category is string => Boolean(category));
+    return ["All", ...Array.from(new Set(categoryNames))];
   }, [posts]);
 
-  // Filter & search
   const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim();
-    return posts.filter((p) => {
-      // Category filter
-      if (activeCategory !== "All" && p.category !== activeCategory) return false;
-      // Search query
-      if (q) {
-        const inTitle = p.title.toLowerCase().includes(q);
-        const inExcerpt = p.excerpt.toLowerCase().includes(q);
-        if (!inTitle && !inExcerpt) return false;
+    const normalizedQuery = query.toLocaleLowerCase().trim();
+    return posts.filter((post) => {
+      if (activeCategory !== "All" && post.category !== activeCategory) {
+        return false;
       }
-      return true;
+      if (!normalizedQuery) return true;
+      return `${post.title} ${post.excerpt}`
+        .toLocaleLowerCase()
+        .includes(normalizedQuery);
     });
   }, [posts, query, activeCategory]);
 
+  const resultText = lang === "zh"
+    ? `${filtered.length} 篇文章${activeCategory === "All" ? "" : ` · ${activeCategory}`}`
+    : `${filtered.length} ${filtered.length === 1 ? "post" : "posts"}${activeCategory === "All" ? "" : ` · ${activeCategory}`}`;
+
   return (
-    <div className="w-full">
-      {/* ── Top Utility Bar ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
-        {/* Category tabs */}
-        <div className="flex items-center gap-0.5 overflow-x-auto pb-1 sm:pb-0 -mx-1 px-1 scrollbar-none">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`shrink-0 px-3.5 py-1.5 text-xs font-mono transition-colors border border-transparent ${
-                activeCategory === cat
-                  ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 border-gray-900 dark:border-gray-100"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:border-gray-200 dark:hover:border-gray-700"
-              }`}
-            >
-              {cat === "All" ? (lang === "zh" ? "全部" : "All") : cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Search */}
-        <div className="relative w-full sm:w-56 shrink-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500 pointer-events-none" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={lang === "zh" ? "搜索文章…" : "Search posts…"}
-            className="w-full pl-9 pr-3 py-2 text-xs font-mono bg-transparent border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-gray-400 dark:focus:border-gray-500 transition-colors"
-          />
-        </div>
-      </div>
-
-      {/* ── Results ── */}
-      {filtered.length === 0 ? (
-        <div className="text-center py-24 border border-gray-200 dark:border-gray-800">
-          <p className="text-sm text-gray-400 dark:text-gray-500 font-mono">
-            {query
-              ? lang === "zh"
-                ? `没有找到匹配 "${query}" 的文章`
-                : `No posts matching "${query}"`
-              : t("noPosts", lang)}
+    <div className="w-full space-y-10">
+      <header className="border-b border-[var(--color-border)] pb-9">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-3 text-xs font-mono uppercase tracking-[0.2em] text-[var(--color-accent)]">
+              {lang === "zh" ? "技术文章与学习笔记" : "Technical writing & notes"}
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight text-[var(--color-fg)] md:text-5xl">
+              {lang === "zh" ? "博客" : "Blog"}
+            </h1>
+          </div>
+          <p className="text-sm font-mono text-[var(--color-fg-muted)]">
+            {resultText}
           </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-l border-t border-gray-200 dark:border-gray-800">
-          {filtered.map((post) => (
-            <div
-              key={post.slug}
-              className="border-r border-b border-gray-200 dark:border-gray-800"
+
+        <div className="relative mt-8 w-full">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-fg-muted)]" />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={lang === "zh" ? "搜索标题或摘要…" : "Search titles or summaries…"}
+            className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] py-3.5 pl-10 pr-10 text-sm font-mono text-[var(--color-fg)] outline-none transition-colors placeholder:text-[var(--color-fg-muted)] focus:border-[var(--color-accent)]/60 focus:ring-2 focus:ring-[var(--color-accent-glow)]"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]"
+              aria-label={lang === "zh" ? "清空搜索" : "Clear search"}
             >
-              <PostCard post={post} />
-            </div>
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </header>
+
+      <div className="flex flex-wrap gap-2" aria-label={lang === "zh" ? "文章分类" : "Post categories"}>
+        {categories.map((category) => {
+          const active = activeCategory === category;
+          return (
+            <button
+              key={category}
+              type="button"
+              onClick={() => setActiveCategory(category)}
+              className={`rounded-full border px-4 py-2 text-xs font-mono transition-colors ${
+                active
+                  ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white dark:text-black"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg-muted)] hover:border-[var(--color-accent)]/40 hover:text-[var(--color-accent)]"
+              }`}
+            >
+              {category === "All" ? (lang === "zh" ? "全部" : "All") : category}
+            </button>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-20 text-center">
+          <p className="text-sm font-mono text-[var(--color-fg-muted)]">
+            {lang === "zh" ? "没有找到匹配的文章" : "No matching posts found"}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              setActiveCategory("All");
+            }}
+            className="mt-4 text-xs font-mono text-[var(--color-accent)] hover:underline"
+          >
+            {lang === "zh" ? "清除筛选" : "Clear filters"}
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {filtered.map((post) => (
+            <PostCard key={post.slug} post={post} />
           ))}
         </div>
       )}
-
-      {/* Count */}
-      <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono mt-6 text-center">
-        {filtered.length}{" "}
-        {lang === "zh"
-          ? activeCategory === "All"
-            ? "篇文章"
-            : `${activeCategory} · ${filtered.length} 篇`
-          : activeCategory === "All"
-            ? "posts"
-            : `posts in ${activeCategory}`}
-      </p>
     </div>
   );
 }

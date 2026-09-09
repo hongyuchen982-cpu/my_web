@@ -20,8 +20,31 @@ export interface GitHubRepo {
   fork: boolean;
 }
 
-const GITHUB_USER = "hongyuchen982-cpu";
-const GITHUB_API = `https://api.github.com/users/${GITHUB_USER}/repos?sort=updated&per_page=20`;
+export interface GitHubReadme {
+  content: string;
+  htmlUrl: string;
+}
+
+const DEFAULT_GITHUB_USER = "hongyuchen982-cpu";
+const DEFAULT_INCLUDED_FORKS = ["hongyuchen982-cpu/workflowWithComfyUI"];
+
+function includedForks(): Set<string> {
+  const configured = process.env.GITHUB_INCLUDED_FORKS
+    ?.split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  return new Set((configured?.length ? configured : DEFAULT_INCLUDED_FORKS).map((name) => name.toLowerCase()));
+}
+
+/** Keep original repositories plus forks the owner explicitly selected for the portfolio. */
+export function isPortfolioRepository(repo: Pick<GitHubRepo, "full_name" | "fork" | "archived">): boolean {
+  return !repo.archived && (!repo.fork || includedForks().has(repo.full_name.toLowerCase()));
+}
+
+function getGitHubApiUrl(): string {
+  const username = process.env.GITHUB_USERNAME?.trim() || DEFAULT_GITHUB_USER;
+  return `https://api.github.com/users/${encodeURIComponent(username)}/repos?sort=updated&per_page=100`;
+}
 
 /**
  * Fetch public repos from GitHub.
@@ -41,7 +64,7 @@ export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
   const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
   try {
-    const res = await fetch(GITHUB_API, {
+    const res = await fetch(getGitHubApiUrl(), {
       headers,
       next: { revalidate: 600 }, // cache 10 min
       signal: controller.signal,
@@ -55,15 +78,68 @@ export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
 
     const repos: GitHubRepo[] = await res.json();
 
-    // Filter: only exclude archived repos
+    // Portfolio candidates: originals plus explicitly selected, active forks.
     return repos
-      .filter((r) => !r.archived)
+      .filter(isPortfolioRepository)
       .sort((a, b) => b.stargazers_count - a.stargazers_count);
   } catch {
     clearTimeout(timeoutId);
     console.warn("[github] Failed to fetch repos");
     return [];
   }
+}
+
+/** Load a public repository README for the project detail page. */
+export async function fetchGitHubReadme(
+  githubUrl?: string | null
+): Promise<GitHubReadme | null> {
+  if (!githubUrl) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(githubUrl);
+  } catch {
+    return null;
+  }
+  if (parsed.hostname.toLowerCase() !== "github.com") return null;
+
+  const [owner, repoWithSuffix] = parsed.pathname.split("/").filter(Boolean);
+  const repo = repoWithSuffix?.replace(/\.git$/i, "");
+  if (!owner || !repo) return null;
+
+  const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/readme`,
+      { headers, next: { revalidate: 1800 }, signal: controller.signal }
+    );
+    if (!response.ok) return null;
+
+    const data: { content?: string; encoding?: string; html_url?: string } = await response.json();
+    if (!data.content || data.encoding !== "base64") return null;
+
+    const content = Buffer.from(data.content.replace(/\s/g, ""), "base64")
+      .toString("utf8")
+      .replace(/^#\s+.+(?:\r?\n)+/, "");
+    return {
+      content,
+      htmlUrl: data.html_url || `${githubUrl.replace(/\/$/, "")}/#readme`,
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/** Normalize GitHub URLs before comparing DB selections with API repositories. */
+export function normalizeGitHubUrl(url?: string | null): string {
+  if (!url) return "";
+  return url.trim().replace(/\.git$/i, "").replace(/\/$/, "").toLowerCase();
 }
 
 /** Map a GitHub repo to a shape compatible with the ProjectCard component. */
@@ -99,10 +175,10 @@ export function mergeProjects<T extends { github?: string | null }>(
   githubProjects: GitHubProjectView[]
 ): (T | GitHubProjectView)[] {
   const dbGithubUrls = new Set(
-    dbProjects.map((p) => p.github).filter(Boolean) as string[]
+    dbProjects.map((p) => normalizeGitHubUrl(p.github)).filter(Boolean)
   );
   const freshGithubProjects = githubProjects.filter(
-    (p) => !dbGithubUrls.has(p.github!)
+    (p) => !dbGithubUrls.has(normalizeGitHubUrl(p.github))
   );
   return [...dbProjects, ...freshGithubProjects];
 }

@@ -13,17 +13,17 @@ export default function PostDetailContent({ post }: { post: Post }) {
   const readTime = post.readTime;
 
   return (
-    <article className="max-w-2xl mx-auto">
+    <article className="mx-auto max-w-4xl">
       <Link
         href="/posts"
-        className="inline-flex items-center gap-1.5 text-xs font-mono text-[var(--color-fg-muted)] hover:text-[var(--color-accent)] transition-colors mb-8"
+        className="mb-10 inline-flex items-center gap-2 text-sm font-mono text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-accent)]"
       >
         <ArrowLeft className="w-3 h-3" />
         {t("backToBlog", lang)}
       </Link>
 
       <header className="mb-10">
-        <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-fg)] mb-4 leading-snug tracking-tight">
+        <h1 className="mb-5 text-4xl font-bold leading-tight tracking-tight text-[var(--color-fg)] md:text-5xl">
           {post.title}
         </h1>
         <div className="flex flex-wrap items-center gap-4 text-sm">

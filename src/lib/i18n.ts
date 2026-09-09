@@ -2,6 +2,7 @@ export type Lang = "zh" | "en";
 
 export const translations = {
   // Header
+  home: { zh: "首页", en: "Home" },
   posts: { zh: "博客", en: "Blog" },
   projects: { zh: "项目", en: "Projects" },
   signIn: { zh: "登录", en: "Sign in" },

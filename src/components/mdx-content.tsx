@@ -7,7 +7,7 @@ const surface = "bg-[var(--color-surface)]";
 
 function Blockquote({ children }: ComponentPropsWithoutRef<"blockquote">) {
   return (
-    <blockquote className="border-l-2 border-[var(--color-accent)]/40 pl-5 my-5 text-[var(--color-fg-dim)] not-italic text-sm leading-relaxed">
+    <blockquote className="my-6 border-l-2 border-[var(--color-accent)]/40 pl-5 text-base leading-8 text-[var(--color-fg-dim)] not-italic">
       {children}
     </blockquote>
   );
@@ -34,25 +34,25 @@ const components = {
   code: CodeSpan,
   pre: PreBlock,
   h1: ({ children, ...props }: ComponentPropsWithoutRef<"h1">) => (
-    <h1 className="text-2xl font-bold text-[var(--color-fg)] mt-10 mb-4 leading-snug tracking-tight" {...props}>{children}</h1>
+    <h1 className="mb-5 mt-12 text-3xl font-bold leading-snug tracking-tight text-[var(--color-fg)]" {...props}>{children}</h1>
   ),
   h2: ({ children, ...props }: ComponentPropsWithoutRef<"h2">) => (
-    <h2 className="text-xl font-semibold text-[var(--color-fg)] mt-8 mb-3 leading-snug tracking-tight" {...props}>{children}</h2>
+    <h2 className="mb-4 mt-10 text-2xl font-semibold leading-snug tracking-tight text-[var(--color-fg)]" {...props}>{children}</h2>
   ),
   h3: ({ children, ...props }: ComponentPropsWithoutRef<"h3">) => (
-    <h3 className="text-lg font-semibold text-[var(--color-fg)] mt-6 mb-2 leading-snug" {...props}>{children}</h3>
+    <h3 className="mb-3 mt-8 text-xl font-semibold leading-snug text-[var(--color-fg)]" {...props}>{children}</h3>
   ),
   p: ({ children, ...props }: ComponentPropsWithoutRef<"p">) => (
-    <p className="my-3 leading-relaxed text-[var(--color-fg-dim)] text-[0.9375rem]" {...props}>{children}</p>
+    <p className="my-4 text-base leading-8 text-[var(--color-fg-dim)]" {...props}>{children}</p>
   ),
   a: ({ children, ...props }: ComponentPropsWithoutRef<"a">) => (
     <a className="text-[var(--color-accent)] underline underline-offset-2 decoration-[var(--color-accent)]/30 hover:decoration-[var(--color-accent)] transition-colors" target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
   ),
   ul: ({ children, ...props }: ComponentPropsWithoutRef<"ul">) => (
-    <ul className="list-disc pl-6 my-3 space-y-1.5 text-[var(--color-fg-dim)] text-[0.9375rem]" {...props}>{children}</ul>
+    <ul className="my-4 list-disc space-y-2 pl-6 text-base text-[var(--color-fg-dim)]" {...props}>{children}</ul>
   ),
   ol: ({ children, ...props }: ComponentPropsWithoutRef<"ol">) => (
-    <ol className="list-decimal pl-6 my-3 space-y-1.5 text-[var(--color-fg-dim)] text-[0.9375rem]" {...props}>{children}</ol>
+    <ol className="my-4 list-decimal space-y-2 pl-6 text-base text-[var(--color-fg-dim)]" {...props}>{children}</ol>
   ),
   li: ({ children, ...props }: ComponentPropsWithoutRef<"li">) => (
     <li className="leading-relaxed" {...props}>{children}</li>

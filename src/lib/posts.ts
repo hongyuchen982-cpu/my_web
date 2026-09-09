@@ -35,6 +35,15 @@ export async function getAllPosts(limit?: number): Promise<Post[]> {
   }
 }
 
+export async function getPublishedPostCount(): Promise<number> {
+  try {
+    return await prisma.post.count({ where: { published: true } });
+  } catch (error) {
+    console.warn("[posts] getPublishedPostCount failed:", (error as Error).message);
+    return 0;
+  }
+}
+
 export async function getPostBySlug(slug: string): Promise<Post | undefined> {
   try {
     const post = await prisma.post.findFirst({

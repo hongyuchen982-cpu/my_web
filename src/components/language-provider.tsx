@@ -1,7 +1,27 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useCallback, useContext, useSyncExternalStore } from "react";
 import type { Lang } from "@/lib/i18n";
+
+const LANGUAGE_EVENT = "chy-language-change";
+
+function getLanguageSnapshot(): Lang {
+  const stored = localStorage.getItem("lang");
+  return stored === "en" ? "en" : "zh";
+}
+
+function getServerLanguageSnapshot(): Lang {
+  return "zh";
+}
+
+function subscribeToLanguage(onStoreChange: () => void): () => void {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(LANGUAGE_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(LANGUAGE_EVENT, onStoreChange);
+  };
+}
 
 const LanguageContext = createContext<{
   lang: Lang;
@@ -17,28 +37,17 @@ export default function LanguageProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [lang, setLang] = useState<Lang>("zh");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("lang") as Lang | null;
-    if (stored === "zh" || stored === "en") {
-      setLang(stored);
-    }
-    setMounted(true);
-  }, []);
+  const lang = useSyncExternalStore(
+    subscribeToLanguage,
+    getLanguageSnapshot,
+    getServerLanguageSnapshot
+  );
 
   const toggleLang = useCallback(() => {
-    setLang((prev) => {
-      const next = prev === "zh" ? "en" : "zh";
-      localStorage.setItem("lang", next);
-      return next;
-    });
-  }, []);
-
-  if (!mounted) {
-    return <>{children}</>;
-  }
+    const next = lang === "zh" ? "en" : "zh";
+    localStorage.setItem("lang", next);
+    window.dispatchEvent(new Event(LANGUAGE_EVENT));
+  }, [lang]);
 
   return (
     <LanguageContext.Provider value={{ lang, toggleLang }}>

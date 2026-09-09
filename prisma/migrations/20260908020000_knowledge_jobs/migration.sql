@@ -1,0 +1,9 @@
+CREATE TABLE "KnowledgeJob" (
+  "projectId" TEXT NOT NULL PRIMARY KEY,
+  "mode" TEXT NOT NULL,
+  "force" BOOLEAN NOT NULL DEFAULT false,
+  "status" TEXT NOT NULL DEFAULT 'queued',
+  "error" TEXT NOT NULL DEFAULT '',
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" DATETIME NOT NULL
+);

@@ -2,40 +2,58 @@
   "name": "my_web",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.2"
+    },
+    "prisma": {
+      "mysql2": "3.24.4"
+    }
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "tsx --conditions=react-server --test tests/*.test.ts",
+    "jobs:work": "tsx --conditions=react-server scripts/knowledge-worker.ts",
+    "deploy:check": "tsx --conditions=react-server scripts/deploy-check.ts",
+    "rag:reindex-all": "tsx --conditions=react-server scripts/reindex-all.ts",
+    "rag:sync": "tsx --conditions=react-server scripts/sync-project-knowledge.ts",
+    "rag:index": "tsx --conditions=react-server scripts/index-project-knowledge.ts",
+    "rag:index-post": "tsx --conditions=react-server scripts/index-post-knowledge.ts",
+    "rag:evaluate": "tsx --conditions=react-server scripts/evaluate-rag.ts",
+    "post:publish-ai-stack": "tsx --conditions=react-server scripts/publish-ai-stack-post.ts",
+    "rag:ask": "tsx --conditions=react-server scripts/ask-local-rag.ts"
   },
   "dependencies": {
+    "@langchain/core": "^1.2.9",
+    "@langchain/langgraph": "^1.4.13",
+    "@langchain/textsplitters": "^1.0.1",
     "@libsql/client": "^0.17.3",
-    "@prisma/adapter-libsql": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@prisma/adapter-libsql": "^7.10.0",
+    "@prisma/client": "^7.10.0",
     "@tailwindcss/typography": "^0.5.19",
-    "bcryptjs": "^3.0.3",
-    "framer-motion": "^12.40.0",
     "gray-matter": "^4.0.3",
-    "jose": "^6.2.3",
     "lucide-react": "^1.17.0",
-    "next": "16.2.7",
-    "pptxgenjs": "^4.0.1",
-    "prisma": "^7.8.0",
+    "next": "^16.3.4",
+    "prisma": "^7.10.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "zod": "^4.4.3"
+    "server-only": "^0.0.1",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.7",
+    "eslint-config-next": "^16.3.4",
     "tailwindcss": "^4",
+    "tsx": "^4.23.13",
     "typescript": "^5"
   }
 }

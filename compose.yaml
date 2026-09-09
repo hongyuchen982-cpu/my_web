@@ -1,0 +1,32 @@
+services:
+  web:
+    build: .
+    image: my-web:local
+    env_file: .env.production
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - site-data:/data
+      - site-backups:/backups
+    restart: unless-stopped
+    init: true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+  worker:
+    image: my-web:local
+    env_file: .env.production
+    command: ["npm", "run", "jobs:work"]
+    volumes:
+      - site-data:/data
+    restart: unless-stopped
+    init: true
+    depends_on:
+      web:
+        condition: service_healthy
+volumes:
+  site-data:
+  site-backups:

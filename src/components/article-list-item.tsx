@@ -15,10 +15,10 @@ export default function ArticleListItem({ post }: { post: Post }) {
   return (
     <Link
       href={`/posts/${post.slug}`}
-      className={`group flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-6 py-4 border-b ${border} last:border-b-0 hover:bg-[var(--color-surface-hover)] transition-colors -mx-2 px-2 rounded`}
+      className={`group -mx-3 flex flex-col gap-2 rounded border-b px-3 py-6 transition-colors last:border-b-0 hover:bg-[var(--color-surface-hover)] sm:flex-row sm:items-start sm:gap-8 ${border}`}
     >
-      <div className="flex items-center gap-3 sm:w-28 shrink-0 pt-0.5">
-        <time className="text-xs text-[var(--color-fg-muted)] font-mono tabular-nums">
+      <div className="flex shrink-0 items-center gap-3 pt-1 sm:w-36">
+        <time className="text-sm text-[var(--color-fg-muted)] font-mono tabular-nums">
           {date}
         </time>
         <span className="text-[10px] text-[var(--color-fg-muted)]/60 font-mono hidden sm:inline">
@@ -26,7 +26,7 @@ export default function ArticleListItem({ post }: { post: Post }) {
         </span>
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="text-sm font-medium text-[var(--color-fg)] group-hover:text-[var(--color-accent)] transition-colors link-underline inline">
+        <h3 className="inline text-lg font-semibold text-[var(--color-fg)] transition-colors group-hover:text-[var(--color-accent)] link-underline">
           {post.title}
         </h3>
         <div className="flex items-center gap-2 mt-1">
@@ -39,7 +39,7 @@ export default function ArticleListItem({ post }: { post: Post }) {
             {readTime}
           </span>
         </div>
-        <p className="text-xs text-[var(--color-fg-dim)] mt-1 line-clamp-2 leading-relaxed">
+        <p className="mt-2 line-clamp-2 text-sm leading-7 text-[var(--color-fg-dim)]">
           {post.excerpt}
         </p>
       </div>

@@ -1,16 +1,8 @@
 import { notFound } from "next/navigation";
-import { getAllPosts, getPostBySlug } from "@/lib/posts";
+import { getPostBySlug } from "@/lib/posts";
 import PostDetailContent from "@/components/post-detail-content";
 
-export async function generateStaticParams() {
-  try {
-    const posts = await getAllPosts();
-    return posts.map((post) => ({ slug: post.slug }));
-  } catch (error) {
-    console.error("[build] generateStaticParams failed:", error);
-    return [];
-  }
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

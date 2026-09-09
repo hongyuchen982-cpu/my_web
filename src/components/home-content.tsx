@@ -8,42 +8,41 @@ import ArticleListItem from "@/components/article-list-item";
 import { useLang } from "@/components/language-provider";
 import { t } from "@/lib/i18n";
 import Link from "next/link";
-import { mergeProjects, type GitHubProjectView } from "@/lib/github";
 
 export default function HomeContent({
   posts,
+  postCount,
   projects,
-  githubProjects,
 }: {
   posts: Post[];
+  postCount: number;
   projects: Project[];
-  githubProjects: GitHubProjectView[];
 }) {
   const { lang } = useLang();
 
-  const allProjects = mergeProjects(projects, githubProjects);
-  const allTechs = new Set(allProjects.flatMap((p) => p.techs));
-  const totalProjectCount = allProjects.length;
+  const allTechs = new Set(projects.flatMap((p) => p.techs));
+  const totalProjectCount = projects.length;
 
   return (
-    <div className="space-y-16">
+    <div className="space-y-28">
       <HeroSection
         projectCount={totalProjectCount}
-        postCount={posts.length}
+        postCount={postCount}
         techCount={allTechs.size}
       />
 
       {/* Featured Projects — manual + GitHub */}
       <section>
-        <h2 className="section-title text-base font-semibold mb-6">
+        <p className="mb-3 text-xs font-mono tracking-[0.18em] text-[var(--color-accent)]">{"// FEATURED"}</p>
+        <h2 className="mb-8 text-3xl font-bold tracking-tight text-[var(--color-fg)] md:text-4xl">
           {t("featuredProjects", lang)}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {allProjects.map((project) => (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {projects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
         </div>
-        {allProjects.length === 0 && (
+        {projects.length === 0 && (
           <p className="text-xs text-[var(--color-fg-muted)] font-mono text-center py-8">
             {t("noPosts", lang)}
           </p>
@@ -52,13 +51,13 @@ export default function HomeContent({
 
       {/* Latest Articles */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="section-title text-base font-semibold">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-3xl font-bold tracking-tight text-[var(--color-fg)]">
             {t("latestArticles", lang)}
           </h2>
           <Link
             href="/posts"
-            className="text-xs font-mono text-[var(--color-fg-muted)] hover:text-[var(--color-accent)] transition-colors"
+            className="text-sm font-mono text-[var(--color-fg-muted)] hover:text-[var(--color-accent)] transition-colors"
           >
             {t("viewAll", lang)}
           </Link>

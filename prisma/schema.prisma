@@ -8,40 +8,171 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
+  id           String    @id @default(uuid())
+  email        String    @unique
   name         String
   passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   posts        Post[]
   projects     Project[]
 }
 
-model Post {
-  id        String   @id @default(uuid())
-  slug      String   @unique
-  title     String
-  excerpt   String   @default("")
-  content   String   @default("")
-  category  String   @default("")
-  published Boolean  @default(false)
+model RateBucket {
+  key       String   @id
+  count     Int      @default(0)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model KnowledgeJob {
+  projectId String @id
+  mode String
+  force Boolean @default(false)
+  status String @default("queued")
+  error String @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  authorId  String?
-  author    User?    @relation(fields: [authorId], references: [id])
+}
+
+model Post {
+  id              String               @id @default(uuid())
+  slug            String               @unique
+  title           String
+  excerpt         String               @default("")
+  content         String               @default("")
+  category        String               @default("")
+  published       Boolean              @default(false)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  authorId        String?
+  author          User?                @relation(fields: [authorId], references: [id])
+  knowledgeChunks PostKnowledgeChunk[]
+}
+
+model PostKnowledgeChunk {
+  id             String   @id @default(uuid())
+  postId         String
+  chunkIndex     Int
+  startLine      Int      @default(1)
+  endLine        Int      @default(1)
+  content        String
+  contentHash    String
+  embedding      String   @default("")
+  embeddingModel String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, chunkIndex])
+  @@index([embeddingModel])
+}
+
+model RagInteraction {
+  id             String   @id @default(uuid())
+  question       String
+  answer         String
+  sources        String   @default("[]")
+  topScore       Float    @default(0)
+  citationScore  Float    @default(0)
+  refused        Boolean  @default(false)
+  feedback       String?
+  feedbackReason String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([feedback])
+  @@index([refused])
+  @@index([createdAt])
+}
+
+model RagEvaluationCase {
+  id                  String   @id @default(uuid())
+  question            String   @unique
+  expectedMode        String
+  expectedSource      String   @default("")
+  enabled             Boolean  @default(true)
+  originInteractionId String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([enabled])
 }
 
 model Project {
-  id          String  @id @default(uuid())
-  title       String
-  description String  @default("")
-  category    String  @default("")
-  status      String  @default("active")
-  url         String?
-  github      String?
-  techs       String  @default("[]")
-  sortOrder   Int     @default(0)
-  authorId    String?
-  author      User?   @relation(fields: [authorId], references: [id])
+  id              String           @id @default(uuid())
+  title           String
+  description     String           @default("")
+  category        String           @default("")
+  status          String           @default("active")
+  url             String?
+  github          String?
+  techs           String           @default("[]")
+  sortOrder       Int              @default(0)
+  authorId        String?
+  author          User?            @relation(fields: [authorId], references: [id])
+  knowledgeSource KnowledgeSource?
+}
+
+model KnowledgeSource {
+  id               String           @id @default(uuid())
+  projectId        String           @unique
+  repository       String
+  defaultBranch    String           @default("")
+  lastCommitSha    String           @default("")
+  status           String           @default("pending")
+  enabled          Boolean          @default(true)
+  fileCount        Int              @default(0)
+  totalBytes       Int              @default(0)
+  chunkCount       Int              @default(0)
+  embeddingModel   String           @default("")
+  indexedCommitSha String           @default("")
+  indexedAt        DateTime?
+  lastSyncedAt     DateTime?
+  error            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  files            KnowledgeFile[]
+  chunks           KnowledgeChunk[]
+}
+
+model KnowledgeFile {
+  id        String           @id @default(uuid())
+  sourceId  String
+  path      String
+  sha       String
+  language  String           @default("")
+  size      Int              @default(0)
+  content   String           @default("")
+  githubUrl String
+  updatedAt DateTime         @updatedAt
+  source    KnowledgeSource  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  chunks    KnowledgeChunk[]
+
+  @@unique([sourceId, path])
+  @@index([sourceId])
+}
+
+model KnowledgeChunk {
+  id             String          @id @default(uuid())
+  sourceId       String
+  fileId         String
+  chunkIndex     Int
+  startLine      Int             @default(1)
+  endLine        Int             @default(1)
+  content        String
+  contentHash    String
+  embedding      String          @default("")
+  embeddingModel String          @default("")
+  githubUrl      String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  source         KnowledgeSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  file           KnowledgeFile   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, chunkIndex])
+  @@index([sourceId])
+  @@index([contentHash])
 }

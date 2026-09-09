@@ -1,6 +1,7 @@
 import { getAllPosts } from "@/lib/posts";
 import BlogGrid from "@/components/blog-grid";
 import type { Metadata } from "next";
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Blog",

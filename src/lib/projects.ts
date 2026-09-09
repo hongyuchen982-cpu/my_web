@@ -22,6 +22,16 @@ export async function getProjects(): Promise<Project[]> {
   }
 }
 
+export async function getProjectById(id: string): Promise<Project | null> {
+  try {
+    const project = await prisma.project.findUnique({ where: { id } });
+    return project ? toProjectView(project) : null;
+  } catch (error) {
+    console.warn("[projects] getProjectById failed:", (error as Error).message);
+    return null;
+  }
+}
+
 function toProjectView(p: {
   id: string; title: string; description: string; category: string; status: string;
   url: string | null; github: string | null; techs: string; sortOrder: number;

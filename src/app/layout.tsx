@@ -4,6 +4,7 @@ import ThemeProvider from "@/components/theme-provider";
 import LanguageProvider from "@/components/language-provider";
 import Header from "@/components/header";
 import Footer from "@/components/footer";
+import AiChatWidget from "@/components/ai-chat-widget";
 
 export const metadata: Metadata = {
   title: {
@@ -29,10 +30,11 @@ export default function RootLayout({
         <ThemeProvider>
           <LanguageProvider>
             <Header />
-            <main className="flex-1 mx-auto w-full max-w-4xl px-6 py-10">
+            <main className="flex-1 mx-auto w-full max-w-6xl px-5 py-12 sm:px-8 md:py-16">
               {children}
             </main>
-            <Footer />
+            <Footer icpRecord={process.env.SITE_ICP_RECORD} policeRecord={process.env.SITE_POLICE_RECORD} />
+            <AiChatWidget />
           </LanguageProvider>
         </ThemeProvider>
       </body>

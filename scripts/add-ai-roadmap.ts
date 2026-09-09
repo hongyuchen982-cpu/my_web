@@ -33,7 +33,7 @@ const excerpt = getField("excerpt");
 async function main() {
   console.log(`Adding AI roadmap post...`);
   console.log(`  Title: ${title}`);
-  console.log(`  Content length: ${mdContent.length} chars\n`);
+  console.log(`  Content length: ${body.length} chars\n`);
 
   const existing = await prisma.post.findUnique({ where: { slug: SLUG } });
   if (existing) {
@@ -43,7 +43,7 @@ async function main() {
       data: {
         title,
         excerpt,
-        content: mdContent,
+        content: body,
         category: CATEGORY,
         published: true,
       },
@@ -55,7 +55,7 @@ async function main() {
         slug: SLUG,
         title,
         excerpt,
-        content: mdContent,
+        content: body,
         category: CATEGORY,
         published: true,
       },

@@ -69,43 +69,43 @@ export default function PostCard({ post }: { post: Post }) {
   return (
     <Link
       href={`/posts/${post.slug}`}
-      className="group block border border-gray-200 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-900/30 transition-colors p-6 flex flex-col h-full"
+      className="card-glow group flex h-full flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition-colors hover:bg-[var(--color-surface-hover)]"
     >
       {/* Row 1: Category + Date */}
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400 dark:text-gray-500">
+      <div className="mb-5 flex items-center justify-between">
+        <span className="text-xs font-mono uppercase tracking-wider text-[var(--color-accent)]">
           {post.category || (lang === "zh" ? "未分类" : "Uncategorized")}
         </span>
-        <time className="text-[10px] font-mono tabular-nums text-gray-400 dark:text-gray-500">
+        <time className="text-xs font-mono tabular-nums text-[var(--color-fg-muted)]">
           {date}
         </time>
       </div>
 
       {/* Row 2: Geometric icon */}
-      <div className="aspect-[16/9] mb-5 overflow-hidden bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800/50">
+      <div className="mb-5 aspect-[2/1] overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-bg)]">
         <GeometricIcon seed={post.slug + post.title} />
       </div>
 
       {/* Row 3: Title */}
-      <h3 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors mb-2 leading-snug">
+      <h3 className="mb-3 text-xl font-bold leading-snug tracking-tight text-[var(--color-fg)] transition-colors group-hover:text-[var(--color-accent)]">
         {post.title}
       </h3>
 
       {/* Row 4: Excerpt */}
-      <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed mb-5 flex-1">
+      <p className="mb-6 line-clamp-3 flex-1 text-sm leading-7 text-[var(--color-fg-dim)]">
         {post.excerpt}
       </p>
 
       {/* Row 5: Author */}
-      <div className="flex items-center gap-2.5 pt-3 border-t border-gray-100 dark:border-gray-800/50">
-        <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-mono text-gray-500 dark:text-gray-400 shrink-0">
+      <div className="flex items-center gap-2.5 border-t border-[var(--color-border)] pt-3">
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-glow)] text-[10px] font-mono text-[var(--color-accent)]">
           {post.author?.name?.charAt(0)?.toUpperCase() || "?"}
         </div>
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-mono text-gray-500 dark:text-gray-400 truncate">
+          <span className="truncate text-xs font-mono text-[var(--color-fg-dim)]">
             {post.author?.name || "Anonymous"}
           </span>
-          <span className="text-[10px] text-gray-300 dark:text-gray-600 font-mono shrink-0">
+          <span className="shrink-0 text-[10px] font-mono text-[var(--color-fg-muted)]">
             {readTime}
           </span>
         </div>

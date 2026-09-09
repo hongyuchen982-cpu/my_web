@@ -1,0 +1,8 @@
+[Unit]
+Description=My web SQLite backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /srv/my-web/deploy/backup.sh
