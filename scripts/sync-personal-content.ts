@@ -4,13 +4,17 @@ import { loadEnvConfig } from "@next/env";
 import matter from "gray-matter";
 
 const cloud = process.argv.includes("--cloud");
+const cleanupForks = process.argv.includes("--cleanup-forks");
 if (cloud) Reflect.set(process.env, "NODE_ENV", "production");
 loadEnvConfig(process.cwd(), !cloud);
 
 const POST_FILES = [
   "agent-memory-beyond-rag.md",
   "ai-agent-rules-practice-notes.md",
+  "database-and-ai-production-retrospective.md",
+  "how-this-site-was-built.md",
   "pip-proxy-network-troubleshooting.md",
+  "python-mysql-celery-transformers-engineering.md",
 ] as const;
 
 const FORK_URLS = [
@@ -91,9 +95,18 @@ async function main() {
       });
     }
 
-    const removed = await prisma.project.deleteMany({
-      where: { github: { in: [...FORK_URLS] } },
-    });
+    const attributed = author
+      ? await prisma.post.updateMany({
+          where: { authorId: null },
+          data: { authorId: author.id },
+        })
+      : { count: 0 };
+
+    const removed = cleanupForks
+      ? await prisma.project.deleteMany({
+          where: { github: { in: [...FORK_URLS] } },
+        })
+      : { count: 0 };
 
     for (const project of PROJECTS) {
       const existing = await prisma.project.findFirst({ where: { github: project.github } });
@@ -112,7 +125,9 @@ async function main() {
       else await prisma.project.create({ data });
     }
 
-    console.log(`${cloud ? "云端" : "本地"}同步完成：3 篇个人文章，4 个原创项目，移除 ${removed.count} 个 Fork 项目。`);
+    console.log(
+      `${cloud ? "云端" : "本地"}同步完成：${POST_FILES.length} 篇个人文章，补齐 ${attributed.count} 篇文章作者，4 个原创项目${cleanupForks ? `，移除 ${removed.count} 个 Fork 项目` : ""}。`,
+    );
   } finally {
     await prisma.$disconnect();
   }

@@ -36,6 +36,7 @@ async function main() {
   console.log(`  Content length: ${body.length} chars\n`);
 
   const existing = await prisma.post.findUnique({ where: { slug: SLUG } });
+  const author = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
   if (existing) {
     console.log(`Post "${SLUG}" already exists. Updating content...`);
     await prisma.post.update({
@@ -46,6 +47,7 @@ async function main() {
         content: body,
         category: CATEGORY,
         published: true,
+        authorId: author?.id ?? existing.authorId,
       },
     });
     console.log("Post updated.");
@@ -58,6 +60,7 @@ async function main() {
         content: body,
         category: CATEGORY,
         published: true,
+        authorId: author?.id ?? null,
       },
     });
     console.log("Post created.");

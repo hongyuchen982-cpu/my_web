@@ -1,5 +1,6 @@
 ---
 title: "从接口到模型推理：Python、MySQL、Celery 与 Transformers 的工程化组合"
+date: "2026-09-01"
 excerpt: "把过去项目里分散使用的 Python、MySQL、Celery、Redis 与 Transformers 串成一条可解释、可恢复、可扩展的 AI 异步任务链路。"
 category: "AI Engineering"
 ---
@@ -168,7 +169,7 @@ model_service = ModelService()
 
 一个成熟的回答应该包含状态机、事务边界、失败恢复、资源隔离与可观测性，而不只是贴一段 `delay()` 调用。
 
-## 八、官方 GitHub 参考
+## 八、相关项目与文档入口
 
 - [python/cpython](https://github.com/python/cpython)：Python 语言实现与标准库源码
 - [mysql/mysql-server](https://github.com/mysql/mysql-server)：MySQL Server 源码
@@ -178,5 +179,7 @@ model_service = ModelService()
 - [sqlalchemy/sqlalchemy](https://github.com/sqlalchemy/sqlalchemy)：Python 数据库工具与 ORM
 - [fastapi/fastapi](https://github.com/fastapi/fastapi)：Python API 框架
 - [huggingface/transformers](https://github.com/huggingface/transformers)：预训练模型定义、训练与推理框架
+
+这些链接用于核对组件能力和实现细节，不是本文的内容来源。本文的架构、取舍和代码组织，来自我对这套工程链路的实践整理。
 
 这条链路也能自然延伸到当前作品集的 RAG：把 Transformers 换成 Qwen/Ollama，把推理输入换成检索到的项目切片，Celery 则可以在公网阶段承担 GitHub 增量同步和批量向量化任务。

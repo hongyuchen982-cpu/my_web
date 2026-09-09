@@ -30,6 +30,9 @@ export default function ArticleListItem({ post }: { post: Post }) {
           {post.title}
         </h3>
         <div className="flex items-center gap-2 mt-1">
+          <span className="rounded-full border border-[var(--color-accent)]/30 px-1.5 py-0.5 text-[9px] font-mono tracking-wider text-[var(--color-accent)]">
+            {lang === "zh" ? "原创" : "Original"}
+          </span>
           {post.author && (
             <span className="text-[11px] text-[var(--color-accent)]/70 font-mono">
               @{post.author.name}

@@ -38,6 +38,9 @@ export default function PostDetailContent({ post }: { post: Post }) {
               {post.author.name}
             </span>
           )}
+          <span className="rounded-full border border-[var(--color-accent)]/35 px-2 py-0.5 text-[10px] font-mono tracking-wider text-[var(--color-accent)]">
+            {lang === "zh" ? "原创" : "Original"}
+          </span>
           <span className="inline-flex items-center gap-1.5 text-[var(--color-fg-muted)] font-mono">
             <Clock className="w-3 h-3" />
             {readTime}

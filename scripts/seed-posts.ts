@@ -1,67 +1,53 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import matter from "gray-matter";
 
 const adapter = new PrismaLibSql({ url: "file:dev.db" });
 const prisma = new PrismaClient({ adapter });
 
-interface ArticleInput {
-  slug: string;
-  title: string;
-  excerpt: string;
-  category: string;
-  published: boolean;
-  content: string;
-}
+const POST_FILES = [
+  "agent-memory-beyond-rag.md",
+  "ai-agent-rules-practice-notes.md",
+  "database-and-ai-production-retrospective.md",
+  "how-this-site-was-built.md",
+  "pip-proxy-network-troubleshooting.md",
+  "python-mysql-celery-transformers-engineering.md",
+] as const;
 
 async function seed() {
-  const user = await prisma.user.findFirst();
-  if (!user) {
-    console.error("No user found in database. Please register first.");
-    process.exit(1);
-  }
+  const author = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
+  if (!author) throw new Error("No user found in database. Please register first.");
 
-  console.log(`Author: ${user.name} (${user.email})`);
+  for (const file of POST_FILES) {
+    const source = readFileSync(path.join(process.cwd(), "posts", file), "utf8");
+    const parsed = matter(source);
+    const slug = file.replace(/\.md$/, "");
+    const data = {
+      title: String(parsed.data.title),
+      excerpt: String(parsed.data.excerpt),
+      category: String(parsed.data.category),
+      published: true,
+      content: parsed.content.trim(),
+      createdAt: new Date(String(parsed.data.date)),
+      authorId: author.id,
+    };
 
-  const articles: ArticleInput[] = JSON.parse(
-    readFileSync("scripts/seed-posts.json", "utf-8")
-  );
-
-  console.log(`Creating ${articles.length} articles...\n`);
-
-  for (const article of articles) {
-    const existing = await prisma.post.findUnique({
-      where: { slug: article.slug },
+    await prisma.post.upsert({
+      where: { slug },
+      update: data,
+      create: { slug, ...data },
     });
-
-    if (existing) {
-      console.log(`  SKIP: "${article.title}" (slug exists)`);
-      continue;
-    }
-
-    await prisma.post.create({
-      data: { ...article, authorId: user.id },
-    });
-
-    console.log(`  OK: [${article.category}] ${article.title}`);
+    console.log(`OK: [${data.category}] ${data.title}`);
   }
 
-  const categories = await prisma.post.groupBy({
-    by: ["category"],
-    _count: { id: true },
-  });
-
-  console.log(`\nCategories:`);
-  for (const c of categories) {
-    console.log(`  ${c.category}: ${c._count.id} articles`);
-  }
-
-  console.log(`\nDone! Visit /admin/posts to manage your articles.`);
+  console.log(`Done: ${POST_FILES.length} current personal articles seeded.`);
 }
 
 seed()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
   })
   .finally(() => prisma.$disconnect());

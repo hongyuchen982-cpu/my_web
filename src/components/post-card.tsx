@@ -71,11 +71,16 @@ export default function PostCard({ post }: { post: Post }) {
       href={`/posts/${post.slug}`}
       className="card-glow group flex h-full flex-col overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition-colors hover:bg-[var(--color-surface-hover)]"
     >
-      {/* Row 1: Category + Date */}
+      {/* Row 1: Category + Original label + Date */}
       <div className="mb-5 flex items-center justify-between">
-        <span className="text-xs font-mono uppercase tracking-wider text-[var(--color-accent)]">
-          {post.category || (lang === "zh" ? "未分类" : "Uncategorized")}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono uppercase tracking-wider text-[var(--color-accent)]">
+            {post.category || (lang === "zh" ? "未分类" : "Uncategorized")}
+          </span>
+          <span className="rounded-full border border-[var(--color-accent)]/30 px-2 py-0.5 text-[9px] font-mono tracking-wider text-[var(--color-accent)]">
+            {lang === "zh" ? "原创" : "Original"}
+          </span>
+        </div>
         <time className="text-xs font-mono tabular-nums text-[var(--color-fg-muted)]">
           {date}
         </time>
@@ -103,7 +108,7 @@ export default function PostCard({ post }: { post: Post }) {
         </div>
         <div className="flex items-center gap-2 min-w-0">
           <span className="truncate text-xs font-mono text-[var(--color-fg-dim)]">
-            {post.author?.name || "Anonymous"}
+            {post.author?.name || (lang === "zh" ? "站点作者" : "Site author")}
           </span>
           <span className="shrink-0 text-[10px] font-mono text-[var(--color-fg-muted)]">
             {readTime}

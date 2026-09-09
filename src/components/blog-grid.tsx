@@ -41,7 +41,7 @@ export default function BlogGrid({ posts }: { posts: Post[] }) {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-3 text-xs font-mono uppercase tracking-[0.2em] text-[var(--color-accent)]">
-              {lang === "zh" ? "技术文章与学习笔记" : "Technical writing & notes"}
+              {lang === "zh" ? "我的原创技术文章与学习笔记" : "My original technical writing & notes"}
             </p>
             <h1 className="text-4xl font-bold tracking-tight text-[var(--color-fg)] md:text-5xl">
               {lang === "zh" ? "博客" : "Blog"}
