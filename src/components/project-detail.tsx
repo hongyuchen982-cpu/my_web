@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, BookOpen, GitBranch, Globe2 } from "lucide-react";
-import MDXContent from "@/components/mdx-content";
 import type { GitHubReadme } from "@/lib/github";
 import type { Project } from "@/lib/projects";
 
@@ -26,8 +25,8 @@ export default function ProjectDetail({ project, readme }: { project: Project; r
       icon: Globe2,
     },
     readme && {
-      label: "README 原文",
-      description: "在 GitHub 中查看项目文档和相关引用",
+      label: "仓库文档",
+      description: "在 GitHub 中查看仓库维护记录、文档与引用",
       href: readme.htmlUrl,
       icon: BookOpen,
     },
@@ -58,17 +57,11 @@ export default function ProjectDetail({ project, readme }: { project: Project; r
 
       <section className="py-10">
         <p className="mb-2 text-xs font-mono tracking-[0.18em] text-[var(--color-accent)]">{"// PROJECT STORY"}</p>
-        <h2 className="mb-6 text-2xl font-bold text-[var(--color-fg)]">项目介绍</h2>
-        {readme ? (
-          <div className="prose prose-lg prose-neutral max-w-none dark:prose-invert">
-            <MDXContent content={readme.content} />
-          </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-            <p className="text-base leading-8 text-[var(--color-fg-dim)]">{project.description}</p>
-            <p className="mt-3 text-sm text-[var(--color-fg-muted)]">仓库暂未提供可读取的 README，后续可以在 GitHub 中补充详细设计、核心功能和使用方式。</p>
-          </div>
-        )}
+        <h2 className="mb-6 text-2xl font-bold text-[var(--color-fg)]">我的项目说明</h2>
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+          <p className="text-base leading-8 text-[var(--color-fg-dim)]">{project.description}</p>
+          <p className="mt-3 text-sm text-[var(--color-fg-muted)]">这里只展示我对项目目标、实践内容和当前阶段的说明；仓库 README 与第三方资料统一放在下方文档入口，不作为个人原创介绍。</p>
+        </div>
       </section>
 
       {resources.length > 0 && (

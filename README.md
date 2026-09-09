@@ -23,7 +23,7 @@
 - 公开页面只展示管理员确认过的精选项目
 - 后台支持新增、编辑、删除，以及从原创 GitHub 仓库一键加入
 - GitHub 候选仓库自动排除 Fork 和归档仓库，并按标准化地址去重
-- 项目卡片可进入独立详情页，自动展示仓库 README、GitHub、在线演示和文档入口
+- 项目卡片可进入独立详情页；个人说明与仓库 README 分开，外部文档只作为引用入口
 - 深色/亮色主题和部分中英文界面，选择保存在浏览器本地
 - 响应式桌面与移动端导航
 
@@ -35,7 +35,7 @@
 | `/posts` | 全部已发布文章、分类和搜索 |
 | `/posts/[slug]` | Markdown 文章详情 |
 | `/projects` | 精选项目 |
-| `/projects/[id]` | 项目介绍、README 与相关入口 |
+| `/projects/[id]` | 个人项目说明与仓库文档入口 |
 | `/admin/login` | 项目管理登录 |
 | `/admin/projects` | 精选项目管理 |
 
@@ -97,9 +97,6 @@ GITHUB_USERNAME="hongyuchen982-cpu"
 # 可选；公开仓库无需 Token，但配置后可提高 GitHub API 限额
 GITHUB_TOKEN="your-read-only-token"
 
-# 允许作为作品展示的 Fork 完整仓库名，多个值使用逗号分隔
-GITHUB_INCLUDED_FORKS="hongyuchen982-cpu/workflowWithComfyUI"
-
 # /admin/projects 的管理密码
 ADMIN_PASSWORD="your-private-password"
 
@@ -130,7 +127,14 @@ EMBEDDING_MODEL="text-embedding-3-small"
 
 ## 项目管理
 
-访问 `/admin/projects`，使用 `ADMIN_PASSWORD` 登录。后台可以从 GitHub 原创公开仓库和明确允许的精选 Fork 加入项目，也可以手动新增、编辑和删除。删除操作只移除网站数据库记录，不会删除 GitHub 仓库。
+访问 `/admin/projects`，使用 `ADMIN_PASSWORD` 登录。后台只会把 GitHub 原创公开仓库列为个人项目候选；Fork 和第三方开源仓库必须放在明确标注原作者的“开源学习参考”区域。删除操作只移除网站数据库记录，不会删除 GitHub 仓库。
+
+版本化的个人文章与项目说明可以同步到本地或 Turso：
+
+```bash
+npm run content:sync
+npm run content:sync -- --cloud
+```
 
 管理密码和会话密钥必须同时配置在本地 `.env.local` 与 Vercel 环境变量中。它们只在服务端使用，不要提交进 Git。
 

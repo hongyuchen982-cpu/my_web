@@ -26,19 +26,10 @@ export interface GitHubReadme {
 }
 
 const DEFAULT_GITHUB_USER = "hongyuchen982-cpu";
-const DEFAULT_INCLUDED_FORKS = ["hongyuchen982-cpu/workflowWithComfyUI"];
 
-function includedForks(): Set<string> {
-  const configured = process.env.GITHUB_INCLUDED_FORKS
-    ?.split(",")
-    .map((name) => name.trim())
-    .filter(Boolean);
-  return new Set((configured?.length ? configured : DEFAULT_INCLUDED_FORKS).map((name) => name.toLowerCase()));
-}
-
-/** Keep original repositories plus forks the owner explicitly selected for the portfolio. */
+/** A personal portfolio only lists repositories authored here, never upstream forks. */
 export function isPortfolioRepository(repo: Pick<GitHubRepo, "full_name" | "fork" | "archived">): boolean {
-  return !repo.archived && (!repo.fork || includedForks().has(repo.full_name.toLowerCase()));
+  return !repo.archived && !repo.fork;
 }
 
 function getGitHubApiUrl(): string {
@@ -78,7 +69,7 @@ export async function fetchGitHubRepos(): Promise<GitHubRepo[]> {
 
     const repos: GitHubRepo[] = await res.json();
 
-    // Portfolio candidates: originals plus explicitly selected, active forks.
+    // Portfolio candidates are original, active repositories only.
     return repos
       .filter(isPortfolioRepository)
       .sort((a, b) => b.stargazers_count - a.stargazers_count);

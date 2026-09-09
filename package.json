@@ -23,6 +23,7 @@
     "rag:index": "tsx --conditions=react-server scripts/index-project-knowledge.ts",
     "rag:index-post": "tsx --conditions=react-server scripts/index-post-knowledge.ts",
     "rag:evaluate": "tsx --conditions=react-server scripts/evaluate-rag.ts",
+    "content:sync": "tsx --conditions=react-server scripts/sync-personal-content.ts",
     "post:publish-ai-stack": "tsx --conditions=react-server scripts/publish-ai-stack-post.ts",
     "rag:ask": "tsx --conditions=react-server scripts/ask-local-rag.ts"
   },

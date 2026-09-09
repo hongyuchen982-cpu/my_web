@@ -10,6 +10,20 @@ if (!url || !authToken) {
 
 const client = createClient({ url, authToken });
 const statements = [
+  `CREATE TABLE IF NOT EXISTS "RateBucket" (
+    "key" TEXT NOT NULL PRIMARY KEY,
+    "count" INTEGER NOT NULL DEFAULT 0,
+    "expiresAt" DATETIME NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS "KnowledgeJob" (
+    "projectId" TEXT NOT NULL PRIMARY KEY,
+    "mode" TEXT NOT NULL,
+    "force" BOOLEAN NOT NULL DEFAULT false,
+    "status" TEXT NOT NULL DEFAULT 'queued',
+    "error" TEXT NOT NULL DEFAULT '',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS "KnowledgeSource" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "projectId" TEXT NOT NULL,
@@ -97,6 +111,7 @@ const statements = [
     "updatedAt" DATETIME NOT NULL
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "KnowledgeSource_projectId_key" ON "KnowledgeSource"("projectId")`,
+  `CREATE INDEX IF NOT EXISTS "RateBucket_expiresAt_idx" ON "RateBucket"("expiresAt")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "KnowledgeFile_sourceId_path_key" ON "KnowledgeFile"("sourceId", "path")`,
   `CREATE INDEX IF NOT EXISTS "KnowledgeFile_sourceId_idx" ON "KnowledgeFile"("sourceId")`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "KnowledgeChunk_fileId_chunkIndex_key" ON "KnowledgeChunk"("fileId", "chunkIndex")`,
@@ -148,10 +163,16 @@ const interactionTable = await client.execute(
 const evaluationTable = await client.execute(
   `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'RagEvaluationCase'`
 );
+const rateBucketTable = await client.execute(
+  `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'RateBucket'`
+);
+const knowledgeJobTable = await client.execute(
+  `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'KnowledgeJob'`
+);
 client.close();
 
-if (sourceTable.rows.length !== 1 || fileTable.rows.length !== 1 || chunkTable.rows.length !== 1 || postChunkTable.rows.length !== 1 || interactionTable.rows.length !== 1 || evaluationTable.rows.length !== 1) {
+if (sourceTable.rows.length !== 1 || fileTable.rows.length !== 1 || chunkTable.rows.length !== 1 || postChunkTable.rows.length !== 1 || interactionTable.rows.length !== 1 || evaluationTable.rows.length !== 1 || rateBucketTable.rows.length !== 1 || knowledgeJobTable.rows.length !== 1) {
   throw new Error("Knowledge schema verification failed");
 }
 
-console.log("Project, post, RAG feedback, and evaluation tables are ready.");
+console.log("Knowledge, RAG, rate-limit, and background-job tables are ready.");

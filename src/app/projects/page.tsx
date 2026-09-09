@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Projects",
-  description: "精选项目展示 — personal & open source projects.",
+  description: "个人原创项目与独立标注的开源学习参考。",
 };
 
 export default async function ProjectsPage() {
@@ -19,7 +19,7 @@ export default async function ProjectsPage() {
         <p className="mb-3 text-xs font-mono tracking-[0.18em] text-[var(--color-accent)]">{"// SELECTED WORK"}</p>
         <h1 className="text-4xl font-bold tracking-tight text-[var(--color-fg)] md:text-5xl">精选项目</h1>
         <p className="mt-4 text-base text-[var(--color-fg-muted)]">
-          经过筛选的原创与个人项目，共 {projects.length} 个
+          这里只展示我实际参与编写和维护的项目，共 {projects.length} 个
         </p>
       </div>
 
