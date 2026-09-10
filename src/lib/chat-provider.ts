@@ -89,7 +89,14 @@ export async function requestChat(messages: Message[], schema: object, selected?
         signal: AbortSignal.timeout(Math.max(1, Math.min(ollama ? 120_000 : 15_000, deadline - Date.now()))), cache: "no-store",
       });
       if (!response.ok) {
-        if (![404, 408, 429, 500, 502, 503, 504].includes(response.status)) throw new Error(`CHAT_FATAL_${response.status}`);
+        // Provider error bodies often explain whether a 403 is a disabled key,
+        // an account restriction, or a rejected model. They never need to be
+        // returned to visitors, but keeping a short sanitized copy in server
+        // logs makes production failures diagnosable.
+        const detail = (await response.text()).replace(/[\r\n\t]+/g, " ").slice(0, 500);
+        if (![404, 408, 429, 500, 502, 503, 504].includes(response.status)) {
+          throw new Error(`CHAT_FATAL_${response.status}${detail ? `: ${detail}` : ""}`);
+        }
         throw new Error(`CHAT_RETRY_${response.status}`);
       }
       const payload = await response.json() as { message?: { content?: string }; choices?: { message?: { content?: string } }[] };
