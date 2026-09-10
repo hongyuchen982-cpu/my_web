@@ -38,6 +38,7 @@ test("fresh migrations, atomic limiter, feedback proof and durable job deduplica
     const integrity = await db.execute("PRAGMA integrity_check");
     assert.equal(integrity.rows[0].integrity_check, "ok");
     const { answerWithLocalRag } = await import("../src/lib/rag");
+    const { searchKnowledge } = await import("../src/lib/knowledge-index");
     const originalFetch = globalThis.fetch;
     process.env.CHAT_PROVIDER = "ollama";
     process.env.EMBEDDING_PROVIDER = "ollama";
@@ -46,15 +47,19 @@ test("fresh migrations, atomic limiter, feedback proof and durable job deduplica
     delete process.env.CHAT_MODEL;
     const post = await prisma.post.create({ data: { slug: "test", title: "测试文章", published: true, content: "本站通过数据库记录任务状态并由独立后台进程执行任务。" } });
     await prisma.postKnowledgeChunk.create({ data: { postId: post.id, chunkIndex: 0, content: post.content, contentHash: "test", embedding: "[1,0]", embeddingModel: "test-embed" } });
+    const legacyPost = await prisma.post.create({ data: { slug: "agent-memory", title: "Agent Memory 实践", published: true, content: "Agent Memory 保存用户偏好、任务状态和可复用经验。" } });
+    await prisma.postKnowledgeChunk.create({ data: { postId: legacyPost.id, chunkIndex: 0, content: legacyPost.content, contentHash: "legacy", embedding: "[0,1]", embeddingModel: "retired-embed" } });
     let chatCalls = 0;
     let invalidCitation = false;
     globalThis.fetch = async (url, init) => {
       const body = JSON.parse(String(init?.body));
-      if (String(url).endsWith("/api/embed")) return Response.json({ embeddings: body.input.map((input: string) => input.includes("晚饭") ? [0, 1] : [1, 0]) });
+      if (String(url).endsWith("/api/embed")) return Response.json({ embeddings: body.input.map((input: string) => input.toLocaleLowerCase().includes("agent memory") ? [0, 1] : input.includes("晚饭") ? [0, -1] : [1, 0]) });
       chatCalls += 1;
       return Response.json({ message: { content: JSON.stringify({ claims: [{ text: post.content, citations: [invalidCitation ? 99 : 1] }] }) } });
     };
     try {
+      const legacyMatches = await searchKnowledge("agent memory 有哪些？怎么做？");
+      assert.equal(legacyMatches[0]?.githubUrl, "/posts/agent-memory", "keyword retrieval must include chunks indexed by a previous embedding model");
       assert.equal((await answerWithLocalRag("晚饭吃什么？")).refused, true);
       assert.equal(chatCalls, 0);
       assert.equal((await answerWithLocalRag("任务如何执行？", project.id)).refused, true);

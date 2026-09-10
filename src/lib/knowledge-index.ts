@@ -337,6 +337,19 @@ export function directTextMatchScore(query: string, text: string): number {
   return normalizedQuery.length >= 6 && normalizedText.includes(normalizedQuery) ? 0.99 : 0;
 }
 
+/**
+ * Text retrieval is deliberately independent of the embedding model.  It lets
+ * a visitor find an existing article while a previous index is being rebuilt
+ * after changing embedding providers or models.
+ */
+export function keywordMatchScore(query: string, text: string): number {
+  const direct = directTextMatchScore(query, text);
+  if (direct) return direct;
+  const normalizedText = text.normalize("NFKC").toLocaleLowerCase();
+  const latinTerms = [...new Set(query.toLocaleLowerCase().match(/[a-z][a-z0-9.+#-]{1,}/g) ?? [])];
+  return latinTerms.length >= 2 && latinTerms.every((term) => normalizedText.includes(term)) ? 0.98 : 0;
+}
+
 export async function embedKnowledgeTexts(inputs: string[]): Promise<number[][]> {
   if (inputs.length === 0) return [];
   return requestEmbeddings(inputs, embeddingConfig());
@@ -347,11 +360,16 @@ export async function searchKnowledge(query: string, projectId?: string, limit =
   const normalizedQuery = query.trim();
   if (normalizedQuery.length < 2 || normalizedQuery.length > 500) throw new Error("检索问题需要 2–500 个字符");
   const config = embeddingConfig();
-  const [queryVector] = await requestEmbeddings([normalizedQuery], config);
+  // A changed or temporarily unavailable embedding service must not make the
+  // knowledge base invisible.  Keyword retrieval below remains available.
+  let queryVector: number[] = [];
+  try {
+    [queryVector] = await requestEmbeddings([normalizedQuery], config);
+  } catch (error) {
+    console.warn("[knowledge-index] embedding query unavailable; using keyword retrieval", error instanceof Error ? error.message : "unknown error");
+  }
   const chunks = await prisma.knowledgeChunk.findMany({
     where: {
-      embedding: { not: "" },
-      embeddingModel: config.model,
       source: { enabled: true, ...(projectId ? { projectId } : {}) },
     },
     include: {
@@ -362,8 +380,6 @@ export async function searchKnowledge(query: string, projectId?: string, limit =
 
   const postChunks = projectId ? [] : await prisma.postKnowledgeChunk.findMany({
     where: {
-      embedding: { not: "" },
-      embeddingModel: config.model,
       post: { published: true },
     },
     include: { post: { select: { slug: true, title: true } } },
@@ -383,7 +399,7 @@ export async function searchKnowledge(query: string, projectId?: string, limit =
         githubUrl: chunk.githubUrl,
         startLine: chunk.startLine,
         endLine: chunk.endLine,
-        score: cosineSimilarity(queryVector, vector),
+        score: Math.max(cosineSimilarity(queryVector, vector), keywordMatchScore(normalizedQuery, chunk.content)),
         vector,
       };
     });
@@ -403,7 +419,7 @@ export async function searchKnowledge(query: string, projectId?: string, limit =
       score: Math.max(
         cosineSimilarity(queryVector, vector),
         titleMatchScore(normalizedQuery, chunk.post.title),
-        directTextMatchScore(normalizedQuery, chunk.content)
+        keywordMatchScore(normalizedQuery, chunk.content)
       ),
       vector,
     };

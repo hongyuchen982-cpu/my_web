@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { filterFreeModels, requestChat } from "../src/lib/chat-provider";
-import { directTextMatchScore, titleMatchScore } from "../src/lib/knowledge-index";
+import { directTextMatchScore, keywordMatchScore, titleMatchScore } from "../src/lib/knowledge-index";
 
 test("mixed Chinese and English questions can directly match article titles", () => {
   assert.equal(titleMatchScore("agent等于rag吗？说说为什么", "Agent Memory 不等于 RAG：从知识检索到持续认知状态"), 0.98);
@@ -9,6 +9,8 @@ test("mixed Chinese and English questions can directly match article titles", ()
   assert.equal(titleMatchScore("晚饭吃什么", "Agent Memory 不等于 RAG"), 0);
   assert.equal(directTextMatchScore("为什么 agent 需要记忆", "## 二、为什么 Agent 需要记忆"), 0.99);
   assert.equal(directTextMatchScore("晚饭吃什么", "## 二、为什么 Agent 需要记忆"), 0);
+  assert.equal(keywordMatchScore("agent memory 有哪些？怎么做？", "Agent Memory 维护持续变化的认知状态。"), 0.98);
+  assert.equal(keywordMatchScore("agent memory 有哪些？怎么做？", "Redis 用于缓存。"), 0);
 });
 
 test("free catalog rejects paid, unknown pricing and non-text models", () => {
