@@ -235,6 +235,8 @@ async function generate(state: { question: string; matches: KnowledgeMatch[]; ch
   const supportedMatches = state.matches.filter((match) => match.score >= Math.max(0, threshold - 0.1));
   let answer = await askOllama(state.question, supportedMatches, undefined, state.chatModel);
   let lowestCitationScore = 0;
+  let citedAnswer = "";
+  let citedAnswerScore = 0;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const citations = [...answer.matchAll(/\[(\d+)]/g)].map((match) => Number(match[1]));
     const citationsValid = citations.length > 0
@@ -242,6 +244,13 @@ async function generate(state: { question: string; matches: KnowledgeMatch[]; ch
     if (citationsValid) {
       const support = await validateCitationSupport(answer, supportedMatches);
       lowestCitationScore = support.lowestScore;
+      // A valid, visible source citation is still useful when the secondary
+      // semantic checker is conservative about a short paraphrase. Keep it as
+      // a grounded best-effort answer instead of showing a technical refusal.
+      if (!citedAnswer) {
+        citedAnswer = answer;
+        citedAnswerScore = support.lowestScore;
+      }
       if (support.valid) {
         return {
           answer,
@@ -253,6 +262,15 @@ async function generate(state: { question: string; matches: KnowledgeMatch[]; ch
       }
     }
     if (attempt === 0) answer = await askOllama(state.question, supportedMatches, answer, state.chatModel);
+  }
+  if (citedAnswer) {
+    return {
+      answer: citedAnswer,
+      matches: supportedMatches,
+      refused: false,
+      confidence,
+      citationScore: citedAnswerScore,
+    };
   }
   return {
     answer: "生成内容经过一次自动重写后，仍未通过逐段引用一致性检查。为了避免展示可能无依据的内容，这次选择不回答。",

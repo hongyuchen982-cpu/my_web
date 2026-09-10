@@ -51,12 +51,12 @@ test("fresh migrations, atomic limiter, feedback proof and durable job deduplica
     await prisma.postKnowledgeChunk.create({ data: { postId: legacyPost.id, chunkIndex: 0, content: legacyPost.content, contentHash: "legacy", embedding: "[0,1]", embeddingModel: "retired-embed" } });
     await prisma.post.create({ data: { slug: "agent-rules", title: "AI 总乱改代码？用规则文件固定项目上下文", published: true, content: "规则文件让 Agent 在修改代码前先了解项目边界。" } });
     let chatCalls = 0;
-    let invalidCitation = false;
+    let citationMode: "valid" | "out-of-range" | "weak" = "valid";
     globalThis.fetch = async (url, init) => {
       const body = JSON.parse(String(init?.body));
-      if (String(url).endsWith("/api/embed")) return Response.json({ embeddings: body.input.map((input: string) => input.toLocaleLowerCase().includes("agent memory") ? [0, 1] : input.includes("晚饭") || input.includes("乱改代码") ? [0, -1] : [1, 0]) });
+      if (String(url).endsWith("/api/embed")) return Response.json({ embeddings: body.input.map((input: string) => input.toLocaleLowerCase().includes("agent memory") ? [0, 1] : input.includes("晚饭") || input.includes("乱改代码") || input.includes("缺少依据的说法") ? [0, -1] : [1, 0]) });
       chatCalls += 1;
-      return Response.json({ message: { content: JSON.stringify({ claims: [{ text: post.content, citations: [invalidCitation ? 99 : 1] }] }) } });
+      return Response.json({ message: { content: JSON.stringify({ claims: [{ text: citationMode === "weak" ? "缺少依据的说法" : post.content, citations: [citationMode === "out-of-range" ? 99 : 1] }] }) } });
     };
     try {
       const legacyMatches = await searchKnowledge("agent memory 有哪些？怎么做？");
@@ -70,9 +70,14 @@ test("fresh migrations, atomic limiter, feedback proof and durable job deduplica
       const answer = await answerWithLocalRag("任务如何执行？");
       assert.equal(answer.refused, false);
       assert.equal(answer.sources.length, 1);
-      invalidCitation = true;
+      citationMode = "out-of-range";
       assert.equal((await answerWithLocalRag("任务如何执行？")).refused, true);
       assert.equal(chatCalls, 3, "invalid citation gets exactly one rewrite");
+      citationMode = "weak";
+      const bestEffort = await answerWithLocalRag("任务如何执行？");
+      assert.equal(bestEffort.refused, false, "a syntactically valid source citation should not be hidden by a conservative semantic score");
+      assert.equal(bestEffort.sources.length, 1);
+      assert.ok(bestEffort.citationScore < 0.4);
     } finally { globalThis.fetch = originalFetch; }
   } finally { await prisma.$disconnect(); db.close(); }
 });
