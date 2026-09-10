@@ -260,6 +260,16 @@ async function generate(state: { question: string; matches: KnowledgeMatch[]; ch
           citationScore: support.lowestScore,
         };
       }
+      // A valid source number already gives the visitor a direct way to
+      // inspect the evidence. Do not spend a second free-model request merely
+      // to chase a stricter semantic-score threshold.
+      return {
+        answer,
+        matches: supportedMatches,
+        refused: false,
+        confidence,
+        citationScore: support.lowestScore,
+      };
     }
     if (attempt === 0) answer = await askOllama(state.question, supportedMatches, answer, state.chatModel);
   }

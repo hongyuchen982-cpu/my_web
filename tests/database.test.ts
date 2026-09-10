@@ -78,6 +78,7 @@ test("fresh migrations, atomic limiter, feedback proof and durable job deduplica
       assert.equal(bestEffort.refused, false, "a syntactically valid source citation should not be hidden by a conservative semantic score");
       assert.equal(bestEffort.sources.length, 1);
       assert.ok(bestEffort.citationScore < 0.4);
+      assert.equal(chatCalls, 4, "a valid source citation must not trigger a second chat request");
     } finally { globalThis.fetch = originalFetch; }
   } finally { await prisma.$disconnect(); db.close(); }
 });
