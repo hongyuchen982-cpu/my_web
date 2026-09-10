@@ -124,7 +124,13 @@ async function validateCitationSupport(answer: string, matches: KnowledgeMatch[]
     return { valid: false, checkedClaims: parsed.length, lowestScore: 0 };
   }
 
-  const vectors = await embedKnowledgeTexts(parsed.map((item) => item.claim));
+  let vectors: number[][];
+  try {
+    vectors = await embedKnowledgeTexts(parsed.map((item) => item.claim));
+  } catch (error) {
+    console.warn("[rag] citation embedding unavailable; retaining valid source citations", error instanceof Error ? error.message : "unknown error");
+    return { valid: false, checkedClaims: parsed.length, lowestScore: 0 };
+  }
   // Unindexed published articles are allowed as a deployment-safe fallback.
   // Generate their source vectors on demand so citation checking stays as
   // strict as it is for pre-indexed chunks.
@@ -133,8 +139,13 @@ async function validateCitationSupport(answer: string, matches: KnowledgeMatch[]
     .map((vector, index) => vector.length === 0 ? index : -1)
     .filter((index) => index >= 0);
   if (missingVectorIndexes.length > 0) {
-    const generated = await embedKnowledgeTexts(missingVectorIndexes.map((index) => matches[index].content));
-    missingVectorIndexes.forEach((index, generatedIndex) => { sourceVectors[index] = generated[generatedIndex]; });
+    try {
+      const generated = await embedKnowledgeTexts(missingVectorIndexes.map((index) => matches[index].content));
+      missingVectorIndexes.forEach((index, generatedIndex) => { sourceVectors[index] = generated[generatedIndex]; });
+    } catch (error) {
+      console.warn("[rag] source embedding unavailable; retaining valid source citations", error instanceof Error ? error.message : "unknown error");
+      return { valid: false, checkedClaims: parsed.length, lowestScore: 0 };
+    }
   }
   const scores = parsed.map((item, index) => Math.max(
     ...item.citations.map((citation) => cosineSimilarity(vectors[index], sourceVectors[citation - 1] ?? []))
