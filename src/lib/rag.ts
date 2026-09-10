@@ -125,8 +125,19 @@ async function validateCitationSupport(answer: string, matches: KnowledgeMatch[]
   }
 
   const vectors = await embedKnowledgeTexts(parsed.map((item) => item.claim));
+  // Unindexed published articles are allowed as a deployment-safe fallback.
+  // Generate their source vectors on demand so citation checking stays as
+  // strict as it is for pre-indexed chunks.
+  const sourceVectors = matches.map((match) => match.vector);
+  const missingVectorIndexes = sourceVectors
+    .map((vector, index) => vector.length === 0 ? index : -1)
+    .filter((index) => index >= 0);
+  if (missingVectorIndexes.length > 0) {
+    const generated = await embedKnowledgeTexts(missingVectorIndexes.map((index) => matches[index].content));
+    missingVectorIndexes.forEach((index, generatedIndex) => { sourceVectors[index] = generated[generatedIndex]; });
+  }
   const scores = parsed.map((item, index) => Math.max(
-    ...item.citations.map((citation) => cosineSimilarity(vectors[index], matches[citation - 1]?.vector ?? []))
+    ...item.citations.map((citation) => cosineSimilarity(vectors[index], sourceVectors[citation - 1] ?? []))
   ));
   const lowestScore = Math.min(...scores);
   return {

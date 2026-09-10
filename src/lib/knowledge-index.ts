@@ -347,7 +347,18 @@ export function keywordMatchScore(query: string, text: string): number {
   if (direct) return direct;
   const normalizedText = text.normalize("NFKC").toLocaleLowerCase();
   const latinTerms = [...new Set(query.toLocaleLowerCase().match(/[a-z][a-z0-9.+#-]{1,}/g) ?? [])];
-  return latinTerms.length >= 2 && latinTerms.every((term) => normalizedText.includes(term)) ? 0.98 : 0;
+  if (latinTerms.length >= 2 && latinTerms.every((term) => normalizedText.includes(term))) return 0.98;
+
+  // Chinese questions do not have whitespace to reliably separate terms.  A
+  // shared four-character phrase (for example “乱改代码”) is specific enough
+  // to rescue an unindexed article without treating generic wording as a hit.
+  const chinese = [...query.normalize("NFKC").replace(/[^\p{Script=Han}]/gu, "")];
+  for (let length = Math.min(8, chinese.length); length >= 4; length -= 1) {
+    for (let start = 0; start <= chinese.length - length; start += 1) {
+      if (normalizedText.includes(chinese.slice(start, start + length).join(""))) return 0.97;
+    }
+  }
+  return 0;
 }
 
 export async function embedKnowledgeTexts(inputs: string[]): Promise<number[][]> {
@@ -384,6 +395,16 @@ export async function searchKnowledge(query: string, projectId?: string, limit =
     },
     include: { post: { select: { slug: true, title: true } } },
   });
+  // Vercel deployments can point at a newly provisioned database before the
+  // offline indexing worker has run. Published posts are still authoritative
+  // sources, so make them searchable immediately instead of returning an
+  // empty knowledge base.
+  const fallbackPosts = !projectId
+    ? await prisma.post.findMany({
+        where: { published: true, knowledgeChunks: { none: {} } },
+        select: { slug: true, title: true, content: true },
+      })
+    : [];
 
   const projectMatches: KnowledgeMatch[] = chunks
     .map((chunk) => {
@@ -424,8 +445,26 @@ export async function searchKnowledge(query: string, projectId?: string, limit =
       vector,
     };
   });
+  const unindexedArticleMatches: KnowledgeMatch[] = fallbackPosts.map((post) => ({
+    kind: "post" as const,
+    projectId: "",
+    repository: "article",
+    path: post.title,
+    language: "Markdown",
+    // Keep the fallback source bounded when it is passed to the chat model.
+    content: post.content.slice(0, 8_000),
+    githubUrl: `/posts/${post.slug}`,
+    startLine: 1,
+    endLine: post.content.split("\n").length,
+    score: Math.max(
+      titleMatchScore(normalizedQuery, post.title),
+      keywordMatchScore(normalizedQuery, post.title),
+      keywordMatchScore(normalizedQuery, post.content)
+    ),
+    vector: [],
+  }));
 
-  return [...projectMatches, ...articleMatches]
+  return [...projectMatches, ...articleMatches, ...unindexedArticleMatches]
     .filter((match) => match.score >= 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, Math.min(Math.max(limit, 1), 20));
