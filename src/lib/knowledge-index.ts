@@ -305,6 +305,38 @@ export function cosineSimilarity(left: number[], right: number[]): number {
   return denominator ? dot / denominator : -1;
 }
 
+/**
+ * A portfolio visitor will often ask about words copied directly from an article
+ * title. Embedding similarity alone can under-rank those short queries, especially
+ * when they mix Chinese and English (for example "Agent 等于 RAG 吗").
+ */
+export function titleMatchScore(query: string, title: string): number {
+  const normalize = (value: string) => value.normalize("NFKC").toLocaleLowerCase().replace(/[\s\p{P}\p{S}]+/gu, "");
+  const normalizedQuery = normalize(query);
+  const normalizedTitle = normalize(title);
+  if (normalizedQuery.length >= 4 && (normalizedTitle.includes(normalizedQuery) || normalizedQuery.includes(normalizedTitle))) {
+    return 1;
+  }
+
+  const latinTerms = [...new Set(query.toLocaleLowerCase().match(/[a-z][a-z0-9.+#-]{1,}/g) ?? [])];
+  if (latinTerms.length >= 2 && latinTerms.every((term) => normalizedTitle.includes(normalize(term)))) {
+    return 0.98;
+  }
+  return 0;
+}
+
+/**
+ * Preserve a direct textual hit alongside semantic search.  This matters for
+ * section-heading questions in Chinese: punctuation and spaces can change the
+ * embedding score even when the exact heading is present in an article.
+ */
+export function directTextMatchScore(query: string, text: string): number {
+  const normalize = (value: string) => value.normalize("NFKC").toLocaleLowerCase().replace(/[\s\p{P}\p{S}]+/gu, "");
+  const normalizedQuery = normalize(query);
+  const normalizedText = normalize(text);
+  return normalizedQuery.length >= 6 && normalizedText.includes(normalizedQuery) ? 0.99 : 0;
+}
+
 export async function embedKnowledgeTexts(inputs: string[]): Promise<number[][]> {
   if (inputs.length === 0) return [];
   return requestEmbeddings(inputs, embeddingConfig());
@@ -368,7 +400,11 @@ export async function searchKnowledge(query: string, projectId?: string, limit =
       githubUrl: `/posts/${chunk.post.slug}`,
       startLine: chunk.startLine,
       endLine: chunk.endLine,
-      score: cosineSimilarity(queryVector, vector),
+      score: Math.max(
+        cosineSimilarity(queryVector, vector),
+        titleMatchScore(normalizedQuery, chunk.post.title),
+        directTextMatchScore(normalizedQuery, chunk.content)
+      ),
       vector,
     };
   });

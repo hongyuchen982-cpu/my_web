@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { filterFreeModels, requestChat } from "../src/lib/chat-provider";
+import { directTextMatchScore, titleMatchScore } from "../src/lib/knowledge-index";
+
+test("mixed Chinese and English questions can directly match article titles", () => {
+  assert.equal(titleMatchScore("agent等于rag吗？说说为什么", "Agent Memory 不等于 RAG：从知识检索到持续认知状态"), 0.98);
+  assert.equal(titleMatchScore("数据库与 AI 云端部署问题复盘", "本地能跑，上线却不工作：数据库与 AI 云端部署问题复盘"), 1);
+  assert.equal(titleMatchScore("晚饭吃什么", "Agent Memory 不等于 RAG"), 0);
+  assert.equal(directTextMatchScore("为什么 agent 需要记忆", "## 二、为什么 Agent 需要记忆"), 0.99);
+  assert.equal(directTextMatchScore("晚饭吃什么", "## 二、为什么 Agent 需要记忆"), 0);
+});
 
 test("free catalog rejects paid, unknown pricing and non-text models", () => {
   const base = { id: "test/model:free", pricing: { prompt: "0", completion: "0" }, architecture: { output_modalities: ["text"] } };

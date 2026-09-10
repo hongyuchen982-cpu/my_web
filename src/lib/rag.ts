@@ -210,7 +210,11 @@ async function generate(state: { question: string; matches: KnowledgeMatch[]; ch
   if (state.matches.length === 0 || confidence < threshold) {
     return {
       answer: "我不知道。现有项目和文章知识库里没有找到足够相关的依据，因此我不应该猜测。",
-      matches: [],
+      // Keep the retrieved candidates visible to the visitor.  They are not
+      // used to support an answer below the confidence threshold, but exposing
+      // them makes the refusal diagnosable and gives the user a clickable path
+      // to inspect the relevant material.
+      matches: state.matches,
       refused: true,
       confidence,
       citationScore: 0,
@@ -241,7 +245,7 @@ async function generate(state: { question: string; matches: KnowledgeMatch[]; ch
   }
   return {
     answer: "生成内容经过一次自动重写后，仍未通过逐段引用一致性检查。为了避免展示可能无依据的内容，这次选择不回答。",
-    matches: [],
+    matches: supportedMatches,
     refused: true,
     confidence,
     citationScore: lowestCitationScore,

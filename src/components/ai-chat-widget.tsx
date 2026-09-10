@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Bot, ExternalLink, LoaderCircle, MessageCircle, Send, Sparkles, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { Bot, ExternalLink, LoaderCircle, MessageCircle, RefreshCw, Send, Sparkles, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { usePathname } from "next/navigation";
@@ -56,15 +56,46 @@ export default function AiChatWidget() {
   const [open, setOpen] = useState(false);
   const [models, setModels] = useState<{ id: string; name: string }[]>([]);
   const [model, setModel] = useState("");
+  const [modelStatus, setModelStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [modelReload, setModelReload] = useState(0);
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
-    fetch("/api/rag/models", { signal: controller.signal }).then((response) => response.json()).then((data) => {
-      setModels(data.models || []);
-      setModel((current) => data.models?.some((item: { id: string }) => item.id === current) ? current : data.models?.[0]?.id || "");
-    }).catch(() => {});
-    return () => controller.abort();
-  }, [open]);
+    let active = true;
+    const loadModels = async () => {
+      setModelStatus("loading");
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const response = await fetch("/api/rag/models", {
+            cache: "no-store",
+            headers: { Accept: "application/json" },
+            signal: controller.signal,
+          });
+          if (!response.ok) throw new Error(`模型接口返回 ${response.status}`);
+          const data = await response.json() as { models?: { id: string; name: string }[] };
+          if (!data.models?.length) throw new Error("模型列表为空");
+          if (!active) return;
+          setModels(data.models);
+          setModel((current) => data.models!.some((item) => item.id === current) ? current : data.models![0].id);
+          setModelStatus("ready");
+          return;
+        } catch (error) {
+          if (controller.signal.aborted) return;
+          if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+            continue;
+          }
+          console.error("[ai-chat-widget] failed to load models", error);
+          if (active) setModelStatus("error");
+        }
+      }
+    };
+    void loadModels();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [open, modelReload]);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [feedbackTarget, setFeedbackTarget] = useState<number | null>(null);
@@ -189,11 +220,24 @@ export default function AiChatWidget() {
           </header>
           <div className="border-b border-[var(--color-border)] px-4 py-2">
             <label htmlFor="chat-model" className="text-xs text-[var(--color-fg-muted)]">优先模型</label>
-            <select id="chat-model" value={model} disabled={loading || models.length === 0} onChange={(event) => setModel(event.target.value)} className="mt-1 w-full rounded border border-[var(--color-border)] bg-[var(--color-bg)] p-2 text-xs text-[var(--color-fg)]">
-              {models.length === 0 && <option value="">尚无可用模型，请管理员配置</option>}
+            <select id="chat-model" value={model} disabled={loading || modelStatus !== "ready"} onChange={(event) => setModel(event.target.value)} className="mt-1 w-full rounded border border-[var(--color-border)] bg-[var(--color-bg)] p-2 text-xs text-[var(--color-fg)]">
+              {modelStatus === "loading" && <option value="">正在加载可用模型…</option>}
+              {modelStatus === "error" && <option value="">模型列表加载失败</option>}
+              {modelStatus === "idle" && <option value="">打开后加载模型</option>}
               {models.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
-            <p className="mt-1 text-[10px] text-[var(--color-fg-muted)]">云端回答会向模型服务发送问题和相关资料；免费服务可能限流。</p>
+            <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-[var(--color-fg-muted)]">
+              <p>云端回答会向模型服务发送问题和相关资料；免费服务可能限流。</p>
+              {modelStatus === "error" && (
+                <button
+                  type="button"
+                  onClick={() => setModelReload((current) => current + 1)}
+                  className="flex shrink-0 items-center gap-1 text-[var(--color-accent)] hover:underline"
+                >
+                  <RefreshCw size={10} /> 重新加载
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4" aria-live="polite">
@@ -223,7 +267,9 @@ export default function AiChatWidget() {
                 </div>
                 {message.role === "assistant" && message.sources && message.sources.length > 0 && (
                   <div className="mt-2 space-y-1.5">
-                    <p className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-fg-muted)]">检索来源</p>
+                    <p className="text-[10px] font-mono uppercase tracking-wider text-[var(--color-fg-muted)]">
+                      {message.refused ? "相关候选来源（未作为回答依据）" : "检索来源"}
+                    </p>
                     {message.sources.map((source, index) => {
                       const external = source.url.startsWith("http");
                       return (
