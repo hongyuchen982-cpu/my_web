@@ -3,6 +3,7 @@ import "server-only";
 export interface ChatModel { id: string; name: string }
 type Message = { role: string; content: string };
 type CatalogItem = { id: string; name?: string; pricing?: Record<string, string>; architecture?: { output_modalities?: string[] } };
+const DEEPSEEK_FLASH = "deepseek-v4-flash";
 
 export function providerName() {
   return process.env.CHAT_PROVIDER?.trim() || "ollama";
@@ -21,10 +22,13 @@ let pending: Promise<ChatModel[]> | undefined;
 
 export async function availableChatModels(): Promise<ChatModel[]> {
   const provider = providerName();
-  if (provider === "ollama") return [{ id: process.env.OLLAMA_CHAT_MODEL || "qwen2.5:3b", name: "本地 Qwen" }];
+  const deepSeekModel = process.env.DEEPSEEK_API_KEY
+    ? [{ id: DEEPSEEK_FLASH, name: "DeepSeek V4 Flash" }]
+    : [];
+  if (provider === "ollama") return [{ id: process.env.OLLAMA_CHAT_MODEL || "qwen2.5:3b", name: "本地 Qwen" }, ...deepSeekModel];
   if (provider === "openrouter") {
     if (!process.env.OPENROUTER_API_KEY) return [];
-    if (catalog && catalog.expires > Date.now()) return catalog.models;
+    if (catalog && catalog.expires > Date.now()) return [...catalog.models, ...deepSeekModel];
     pending ??= (async () => {
       try {
         const response = await fetch("https://openrouter.ai/api/v1/models", { signal: AbortSignal.timeout(10_000), cache: "no-store" });
@@ -32,19 +36,19 @@ export async function availableChatModels(): Promise<ChatModel[]> {
         const payload = await response.json() as { data: CatalogItem[] };
         const models = [{ id: "openrouter/free", name: "自动选择免费模型" }, ...filterFreeModels(payload.data)];
         catalog = { expires: Date.now() + 60_000, models };
-        return models;
+        return [...models, ...deepSeekModel];
       } catch {
         // Never retain a stale price list when the catalog is unavailable.
-        return [{ id: "openrouter/free", name: "自动选择免费模型" }];
+        return [{ id: "openrouter/free", name: "自动选择免费模型" }, ...deepSeekModel];
       } finally { pending = undefined; }
     })();
     return pending;
   }
   if (provider === "siliconflow" || provider === "compatible") {
-    if (!process.env.CHAT_API_KEY) return [];
+    if (!process.env.CHAT_API_KEY) return deepSeekModel;
     // Operator-reviewed allowlist, deliberately empty by default. No claim of live pricing.
-    return (process.env.CHAT_ALLOWED_MODELS || "").split(",").map((id) => id.trim()).filter(Boolean)
-      .map((id) => ({ id, name: id }));
+    return [...(process.env.CHAT_ALLOWED_MODELS || "").split(",").map((id) => id.trim()).filter(Boolean)
+      .map((id) => ({ id, name: id })), ...deepSeekModel];
   }
   throw new Error("Unsupported CHAT_PROVIDER");
 }
@@ -53,10 +57,11 @@ export async function requestChat(messages: Message[], schema: object, selected?
   const models = await availableChatModels();
   const primary = selected || process.env.CHAT_MODEL || models[0]?.id;
   if (!primary || !models.some((model) => model.id === primary)) throw new Error("Model not available");
-  const provider = providerName();
+  const provider = primary === DEEPSEEK_FLASH ? "deepseek" : providerName();
   const ollama = provider === "ollama";
   const base = ollama ? process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434"
     : provider === "openrouter" ? "https://openrouter.ai/api/v1"
+    : provider === "deepseek" ? "https://api.deepseek.com"
     : provider === "siliconflow" ? "https://api.siliconflow.cn/v1" : process.env.CHAT_BASE_URL;
   if (!base || (!ollama && new URL(base).protocol !== "https:")) throw new Error("Cloud chat requires HTTPS");
   // `openrouter/free` is a router, not a guarantee of capacity.  When it is
@@ -76,7 +81,9 @@ export async function requestChat(messages: Message[], schema: object, selected?
       const response = await fetch(`${base.replace(/\/$/, "")}${ollama ? "/api/chat" : "/chat/completions"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(!ollama ? {
-          Authorization: `Bearer ${provider === "openrouter" ? process.env.OPENROUTER_API_KEY : process.env.CHAT_API_KEY}`,
+          Authorization: `Bearer ${provider === "openrouter"
+            ? process.env.OPENROUTER_API_KEY
+            : provider === "deepseek" ? process.env.DEEPSEEK_API_KEY : process.env.CHAT_API_KEY}`,
         } : {}) },
         body: JSON.stringify(ollama ? { model, messages, stream: false, think: false, format: schema, options: { num_predict: 500 } } : {
           model, stream: false, max_tokens: 1600,

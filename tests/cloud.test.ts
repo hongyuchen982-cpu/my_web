@@ -74,3 +74,28 @@ test("automatic free routing tries another free model after the router is satura
     Object.assign(process.env, originalEnv);
   }
 });
+
+test("DeepSeek Flash is selectable alongside the existing free-model pool", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalEnv = { ...process.env };
+  process.env.CHAT_PROVIDER = "openrouter";
+  process.env.OPENROUTER_API_KEY = "router-key";
+  process.env.DEEPSEEK_API_KEY = "deepseek-key";
+  globalThis.fetch = async (url, init) => {
+    if (String(url).endsWith("/models")) return Response.json({ data: [] });
+    assert.equal(String(url), "https://api.deepseek.com/chat/completions");
+    assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer deepseek-key");
+    assert.equal(JSON.parse(String(init?.body)).model, "deepseek-v4-flash");
+    return Response.json({ choices: [{ message: { content: "{}" } }] });
+  };
+  try {
+    const { availableChatModels } = await import("../src/lib/chat-provider");
+    assert.ok((await availableChatModels()).some((model) => model.id === "openrouter/free"));
+    assert.ok((await availableChatModels()).some((model) => model.id === "deepseek-v4-flash"));
+    assert.equal(await requestChat([], {}, "deepseek-v4-flash"), "{}");
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const key of Object.keys(process.env)) if (!(key in originalEnv)) delete process.env[key];
+    Object.assign(process.env, originalEnv);
+  }
+});
