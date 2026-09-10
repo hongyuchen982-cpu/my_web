@@ -59,8 +59,17 @@ export async function requestChat(messages: Message[], schema: object, selected?
     : provider === "openrouter" ? "https://openrouter.ai/api/v1"
     : provider === "siliconflow" ? "https://api.siliconflow.cn/v1" : process.env.CHAT_BASE_URL;
   if (!base || (!ollama && new URL(base).protocol !== "https:")) throw new Error("Cloud chat requires HTTPS");
-  const candidates = provider === "openrouter" && primary !== "openrouter/free"
-    ? [primary, "openrouter/free"] : [primary];
+  // `openrouter/free` is a router, not a guarantee of capacity.  When it is
+  // saturated, try the currently listed zero-price text models one by one.
+  // This deliberately never adds a paid model to the candidate list.
+  const freePool = provider === "openrouter"
+    ? models.filter((model) => model.id !== "openrouter/free").map((model) => model.id)
+    : [];
+  const candidates = provider === "openrouter"
+    ? [...new Set(primary === "openrouter/free"
+        ? [primary, ...freePool]
+        : [primary, "openrouter/free", ...freePool])]
+    : [primary];
   const deadline = Date.now() + (ollama ? 120_000 : 100_000);
   for (const model of candidates) {
     try {

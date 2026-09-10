@@ -51,3 +51,26 @@ test("cloud chat validates selection, protects key and falls back only to free r
     Object.assign(process.env, originalEnv);
   }
 });
+
+test("automatic free routing tries another free model after the router is saturated", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalEnv = { ...process.env };
+  process.env.CHAT_PROVIDER = "openrouter";
+  process.env.OPENROUTER_API_KEY = "test-key";
+  const calls: string[] = [];
+  globalThis.fetch = async (url, init) => {
+    if (String(url).endsWith("/models")) return Response.json({ data: [{ id: "test/model:free", pricing: { prompt: "0", completion: "0" }, architecture: { output_modalities: ["text"] } }] });
+    const payload = JSON.parse(String(init?.body));
+    calls.push(payload.model);
+    if (payload.model === "openrouter/free") return new Response("limited", { status: 429 });
+    return Response.json({ choices: [{ message: { content: "{}" } }] });
+  };
+  try {
+    assert.equal(await requestChat([], {}, "openrouter/free"), "{}");
+    assert.deepEqual(calls, ["openrouter/free", "test/model:free"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const key of Object.keys(process.env)) if (!(key in originalEnv)) delete process.env[key];
+    Object.assign(process.env, originalEnv);
+  }
+});

@@ -8,6 +8,16 @@ import { consumeRateLimit, feedbackToken, sameOrigin } from "@/lib/request-guard
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function chatRateLimit() {
+  const limit = Number(process.env.RAG_RATE_LIMIT ?? "60");
+  return Number.isInteger(limit) && limit > 0 && limit <= 300 ? limit : 60;
+}
+
+function chatRateWindowSeconds() {
+  const seconds = Number(process.env.RAG_RATE_WINDOW_SECONDS ?? "300");
+  return Number.isInteger(seconds) && seconds >= 60 && seconds <= 3_600 ? seconds : 300;
+}
+
 const RequestSchema = z.object({
   question: z.string().trim().min(2).max(500),
   projectId: z.string().trim().min(1).max(100).optional(),
@@ -17,8 +27,9 @@ const RequestSchema = z.object({
 export async function POST(request: NextRequest) {
   if (!sameOrigin(request.headers)) return NextResponse.json({ error: "请求来源无效" }, { status: 403 });
   try {
-    if (!await consumeRateLimit(request.headers, "chat", 12)) {
-      return NextResponse.json({ error: "提问太频繁，请几分钟后再试。" }, { status: 429, headers: { "Retry-After": "300" } });
+    const seconds = chatRateWindowSeconds();
+    if (!await consumeRateLimit(request.headers, "chat", chatRateLimit(), seconds)) {
+      return NextResponse.json({ error: "提问太频繁，请几分钟后再试。" }, { status: 429, headers: { "Retry-After": String(seconds) } });
     }
   } catch {
     return NextResponse.json({ error: "服务暂时不可用" }, { status: 503 });
