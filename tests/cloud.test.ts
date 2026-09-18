@@ -2,6 +2,22 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { filterFreeModels, requestChat } from "../src/lib/chat-provider";
 import { directTextMatchScore, keywordMatchScore, titleMatchScore } from "../src/lib/knowledge-index";
+import { missingQuestionTerms, parseGeneratedAnswer } from "../src/lib/rag";
+
+test("RAG accepts common grounded output formats from free models", () => {
+  assert.equal(
+    parseGeneratedAnswer('{"claims":[{"text":"Celery 分发任务","citations":"来源 [1]"}]}'),
+    "Celery 分发任务 [1]",
+  );
+  assert.equal(
+    parseGeneratedAnswer("```json\n{\"claims\":[{\"text\":\"MySQL 保存状态 [2]\"}]}\n```"),
+    "MySQL 保存状态 [2]",
+  );
+  assert.equal(parseGeneratedAnswer("Redis 传递消息。[1]"), "Redis 传递消息。[1]");
+  assert.equal(parseGeneratedAnswer("Redis 传递消息。"), null);
+  assert.deepEqual(missingQuestionTerms("Celery、MySQL 和 Redis 如何分工？", "Celery 分发任务。[1]"), ["mysql", "redis"]);
+  assert.deepEqual(missingQuestionTerms("Celery、MySQL 和 Redis 如何分工？", "Celery、MySQL、Redis 各有职责。[1]"), []);
+});
 
 test("mixed Chinese and English questions can directly match article titles", () => {
   assert.equal(titleMatchScore("agent等于rag吗？说说为什么", "Agent Memory 不等于 RAG：从知识检索到持续认知状态"), 0.98);

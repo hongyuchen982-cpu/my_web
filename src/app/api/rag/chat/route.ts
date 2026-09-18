@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
       refused: result.refused,
       confidence: Number(result.confidence.toFixed(3)),
       citationScore: Number(result.citationScore.toFixed(3)),
+      refusalReason: result.refusalReason,
     });
   } catch (error) {
     console.error("RAG chat failed:", error instanceof Error ? `${error.name}: ${error.message}` : "UnknownError");

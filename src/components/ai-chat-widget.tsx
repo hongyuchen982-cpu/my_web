@@ -23,6 +23,7 @@ interface AssistantMessage {
   confidence?: number;
   citationScore?: number;
   refused?: boolean;
+  refusalReason?: "low_retrieval_score" | "invalid_generation" | "incomplete_generation";
   feedback?: "positive" | "negative";
   feedbackReason?: string;
 }
@@ -134,6 +135,7 @@ export default function AiChatWidget() {
         confidence?: number;
         citationScore?: number;
         refused?: boolean;
+        refusalReason?: "low_retrieval_score" | "invalid_generation" | "incomplete_generation";
         error?: string;
       };
       if (!response.ok || !payload.answer) throw new Error(payload.error || "AI 助手没有返回答案");
@@ -149,6 +151,7 @@ export default function AiChatWidget() {
           confidence: payload.confidence,
           citationScore: payload.citationScore,
           refused: payload.refused,
+          refusalReason: payload.refusalReason,
         },
       ]);
     } catch (error) {
@@ -282,7 +285,7 @@ export default function AiChatWidget() {
                         >
                           <span className="min-w-0 truncate">[{index + 1}] {source.title}</span>
                           <span className="flex shrink-0 items-center gap-1 font-mono text-[10px]">
-                            {source.score.toFixed(3)} <ExternalLink size={10} />
+                            候选命中 {source.score.toFixed(3)} <ExternalLink size={10} />
                           </span>
                         </a>
                       );
@@ -293,7 +296,11 @@ export default function AiChatWidget() {
                   <div className="mt-2 flex items-center justify-between gap-3 px-1 text-[10px] text-[var(--color-fg-muted)]">
                     <span className="font-mono">
                       {message.refused
-                        ? "已安全拒答"
+                        ? message.refusalReason === "low_retrieval_score"
+                          ? "未找到足够相关的资料"
+                        : message.refusalReason === "incomplete_generation"
+                          ? "已命中资料 · 回答不完整"
+                          : "已命中资料 · 生成格式无效"
                         : `检索 ${message.confidence?.toFixed(3) ?? "—"} · 引用 ${message.citationScore?.toFixed(3) ?? "—"}`}
                     </span>
                     <span className="flex items-center gap-1" aria-label="回答反馈">

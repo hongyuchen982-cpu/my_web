@@ -33,7 +33,10 @@ const RagState = new StateSchema({
   refused: z.boolean().default(false),
   confidence: z.number().default(0),
   citationScore: z.number().default(0),
+  refusalReason: z.enum(["low_retrieval_score", "invalid_generation", "incomplete_generation"]).optional(),
 });
+
+export type RagRefusalReason = "low_retrieval_score" | "invalid_generation" | "incomplete_generation";
 
 export interface RagAnswer {
   answer: string;
@@ -41,6 +44,7 @@ export interface RagAnswer {
   refused: boolean;
   confidence: number;
   citationScore: number;
+  refusalReason?: RagRefusalReason;
 }
 
 export function getRagMinScore(): number {
@@ -63,13 +67,6 @@ const GeneratedAnswerSchema = z.object({
   claims: z.array(z.object({
     text: z.string().trim().min(2).max(500),
     citations: z.array(z.number().int().positive()).min(1).max(6),
-  })).min(1).max(8),
-});
-
-const RawGeneratedAnswerSchema = z.object({
-  claims: z.array(z.object({
-    text: z.string(),
-    citations: z.array(z.coerce.number().int().positive()).optional(),
   })).min(1).max(8),
 });
 
@@ -98,6 +95,63 @@ function firstJsonObject(input: string): string | null {
     }
   }
   return null;
+}
+
+function citationNumbers(value: unknown, text: string): number[] {
+  const raw = Array.isArray(value) ? value : value === undefined ? [] : [value];
+  const explicit = raw.flatMap((item) => String(item).match(/\d+/g) ?? [])
+    .map(Number)
+    .filter((item) => Number.isInteger(item) && item > 0);
+  return explicit.length > 0
+    ? [...new Set(explicit)]
+    : [...new Set([...text.matchAll(/\[(\d+)]/g)].map((match) => Number(match[1])))];
+}
+
+function citedPlainText(input: string): string | null {
+  const text = input.replace(/^```(?:markdown|text)?\s*/i, "").replace(/\s*```$/, "").trim();
+  if (!text || text.startsWith("{") || text.startsWith("[")) return null;
+  const factualLines = text.split(/\n+/).map((line) => line.trim()).filter((line) => line && !/^#{1,6}\s/.test(line));
+  if (factualLines.length === 0 || factualLines.some((line) => !/\[\d+]/.test(line))) return null;
+  return text;
+}
+
+/** Normalize the small format differences produced by free chat models. */
+export function parseGeneratedAnswer(input: string): string | null {
+  try {
+    const jsonObject = firstJsonObject(input);
+    if (jsonObject) {
+      const payload = JSON.parse(jsonObject) as { claims?: unknown[]; answer?: unknown };
+      if (Array.isArray(payload.claims)) {
+        const claims = payload.claims.map((item) => {
+          if (typeof item === "string") return { text: item, citations: citationNumbers(undefined, item) };
+          if (!item || typeof item !== "object") return null;
+          const claim = item as { text?: unknown; citations?: unknown };
+          if (typeof claim.text !== "string") return null;
+          return { text: claim.text, citations: citationNumbers(claim.citations, claim.text) };
+        });
+        const generated = GeneratedAnswerSchema.safeParse({ claims });
+        if (generated.success) {
+          return generated.data.claims.map((claim) => {
+            const text = claim.text.replace(/\[(\d+)]/g, "").trim();
+            const citations = [...new Set(claim.citations)].map((citation) => `[${citation}]`).join("");
+            return `${text} ${citations}`;
+          }).join("\n\n");
+        }
+      }
+      if (typeof payload.answer === "string") return citedPlainText(payload.answer);
+    }
+  } catch {
+    // Some providers ignore JSON mode. A fully cited plain-text answer is
+    // still safe to validate and display below.
+  }
+  return citedPlainText(input);
+}
+
+export function missingQuestionTerms(question: string, answer: string): string[] {
+  const terms = [...new Set(question.toLocaleLowerCase().match(/[a-z][a-z0-9.+#-]{1,}/g) ?? [])];
+  if (terms.length < 2) return [];
+  const normalizedAnswer = answer.toLocaleLowerCase();
+  return terms.filter((term) => !normalizedAnswer.includes(term));
 }
 
 function claimParagraphs(answer: string) {
@@ -163,7 +217,7 @@ async function retrieve(state: { question: string; projectId?: string }) {
   return { matches };
 }
 
-async function askOllama(question: string, matches: KnowledgeMatch[], draft?: string, chatModel?: string): Promise<string> {
+async function askOllama(question: string, matches: KnowledgeMatch[], draft?: string, chatModel?: string, revisionNote?: string): Promise<string> {
   const sources = matches.map((match, index) =>
     `[${index + 1}] ${match.repository}/${match.path} L${match.startLine}-L${match.endLine}\n${match.content}`
   ).join("\n\n---\n\n");
@@ -171,12 +225,12 @@ async function askOllama(question: string, matches: KnowledgeMatch[], draft?: st
   const content = await requestChat([
         {
           role: "system",
-          content: "你是这个作品集的项目助手。只能依据本次提供的项目代码或已发布文章，禁止使用记忆补充事实。格式规则：每一个包含事实的段落或列表项都必须在本段末尾放置至少一个来源编号，例如“Celery 负责分发任务。[1]”；禁止只在答案最后统一写‘依据：[1][2]’。资料没有明确支持时必须回答不知道，不得猜测或编造。",
+          content: "你是这个作品集的项目助手。只能依据本次提供的项目代码或已发布文章，禁止使用记忆补充事实。问题同时点名多个组件时，必须分别说明每个组件。格式规则：每一个包含事实的段落或列表项都必须在本段末尾放置至少一个来源编号，例如“Celery 负责分发任务。[1]”；禁止只在答案最后统一写‘依据：[1][2]’。资料没有明确支持时必须回答不知道，不得猜测或编造。",
         },
         {
           role: "user",
           content: draft
-            ? `问题：${question}\n\n上一版答案没有通过逐段引用一致性检查：\n${draft}\n\n请根据下方原始资料重写。每一个事实段落和每一个列表项末尾都必须单独带有效引用，不能只在末尾统一列来源。\n\n检索到的项目与文章资料：\n${sources}`
+            ? `问题：${question}\n\n上一版答案需要重写：\n${draft}\n\n${revisionNote ?? "上一版没有通过逐段引用一致性检查。"}\n请完整回答问题，并让每一个事实段落和每一个列表项末尾都单独带有效引用，不能只在末尾统一列来源。\n\n检索到的项目与文章资料：\n${sources}`
             : `问题：${question}\n\n请逐段回答，每个事实段落末尾单独标注引用。\n\n检索到的项目与文章资料：\n${sources || "没有检索到资料"}`,
         },
       ], {
@@ -203,27 +257,7 @@ async function askOllama(question: string, matches: KnowledgeMatch[], draft?: st
         },
         required: ["claims"],
       }, chatModel);
-  let generated: z.infer<typeof GeneratedAnswerSchema>;
-  try {
-    const jsonObject = firstJsonObject(content);
-    if (!jsonObject) throw new Error("missing JSON object");
-    const raw = RawGeneratedAnswerSchema.parse(JSON.parse(jsonObject));
-    generated = GeneratedAnswerSchema.parse({
-      claims: raw.claims.map((claim) => ({
-        text: claim.text,
-        citations: claim.citations?.length
-          ? claim.citations
-          : [...claim.text.matchAll(/\[(\d+)]/g)].map((match) => Number(match[1])),
-      })),
-    });
-  } catch {
-    return ""; // The bounded generation loop retries once, then safely refuses.
-  }
-  return generated.claims.map((claim) => {
-    const text = claim.text.replace(/\[(\d+)]/g, "").trim();
-    const citations = [...new Set(claim.citations)].map((citation) => `[${citation}]`).join("");
-    return `${text} ${citations}`;
-  }).join("\n\n");
+  return parseGeneratedAnswer(content) ?? ""; // The bounded generation loop retries once, then safely refuses.
 }
 
 async function generate(state: { question: string; matches: KnowledgeMatch[]; chatModel?: string }) {
@@ -240,6 +274,7 @@ async function generate(state: { question: string; matches: KnowledgeMatch[]; ch
       refused: true,
       confidence,
       citationScore: 0,
+      refusalReason: "low_retrieval_score" as const,
     };
   }
 
@@ -248,11 +283,29 @@ async function generate(state: { question: string; matches: KnowledgeMatch[]; ch
   let lowestCitationScore = 0;
   let citedAnswer = "";
   let citedAnswerScore = 0;
+  let generationFailure: RagRefusalReason = "invalid_generation";
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const citations = [...answer.matchAll(/\[(\d+)]/g)].map((match) => Number(match[1]));
     const citationsValid = citations.length > 0
       && citations.every((citation) => citation >= 1 && citation <= supportedMatches.length);
     if (citationsValid) {
+      const missingTerms = missingQuestionTerms(state.question, answer);
+      if (missingTerms.length > 0 && attempt === 0) {
+        generationFailure = "incomplete_generation";
+        answer = await askOllama(
+          state.question,
+          supportedMatches,
+          answer,
+          state.chatModel,
+          `上一版遗漏了问题点名的对象：${missingTerms.join("、")}。新答案必须分别说明它们的职责。`,
+        );
+        continue;
+      }
+      if (missingTerms.length > 0) {
+        generationFailure = "incomplete_generation";
+        answer = "";
+        continue;
+      }
       const support = await validateCitationSupport(answer, supportedMatches);
       lowestCitationScore = support.lowestScore;
       // A valid, visible source citation is still useful when the secondary
@@ -294,11 +347,14 @@ async function generate(state: { question: string; matches: KnowledgeMatch[]; ch
     };
   }
   return {
-    answer: "生成内容经过一次自动重写后，仍未通过逐段引用一致性检查。为了避免展示可能无依据的内容，这次选择不回答。",
+    answer: generationFailure === "incomplete_generation"
+      ? "检索已命中相关资料，但模型连续两次都没有完整回答问题中点名的对象。为了避免展示残缺结论，这次选择不回答。"
+      : "检索已命中相关资料，但模型连续两次没有返回可用的逐段引用格式。为了避免把无来源内容当成答案展示，这次选择不回答。",
     matches: supportedMatches,
     refused: true,
     confidence,
     citationScore: lowestCitationScore,
+    refusalReason: generationFailure,
   };
 }
 
@@ -320,5 +376,6 @@ export async function answerWithLocalRag(question: string, projectId?: string, c
     refused: result.refused,
     confidence: result.confidence,
     citationScore: result.citationScore,
+    refusalReason: result.refusalReason,
   };
 }
