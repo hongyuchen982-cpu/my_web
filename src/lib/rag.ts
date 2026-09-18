@@ -204,7 +204,7 @@ async function validateCitationSupport(answer: string, matches: KnowledgeMatch[]
   const scores = parsed.map((item, index) => Math.max(
     ...item.citations.map((citation) => cosineSimilarity(vectors[index], sourceVectors[citation - 1] ?? []))
   ));
-  const lowestScore = Math.min(...scores);
+  const lowestScore = Math.max(0, Math.min(...scores));
   return {
     valid: scores.every((score) => score >= getCitationMinScore()),
     checkedClaims: parsed.length,

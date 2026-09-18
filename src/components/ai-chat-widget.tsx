@@ -301,7 +301,9 @@ export default function AiChatWidget() {
                         : message.refusalReason === "incomplete_generation"
                           ? "已命中资料 · 回答不完整"
                           : "已命中资料 · 生成格式无效"
-                        : `检索 ${message.confidence?.toFixed(3) ?? "—"} · 引用 ${message.citationScore?.toFixed(3) ?? "—"}`}
+                        : `检索 ${message.confidence?.toFixed(3) ?? "—"} · ${message.citationScore && message.citationScore > 0
+                          ? `引用复核 ${message.citationScore.toFixed(3)}`
+                          : "引用编号有效"}`}
                     </span>
                     <span className="flex items-center gap-1" aria-label="回答反馈">
                       <button
