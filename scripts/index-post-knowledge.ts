@@ -1,6 +1,8 @@
 import { loadEnvConfig } from "@next/env";
 
-loadEnvConfig(process.cwd());
+const cloud = process.argv.includes("--cloud");
+if (cloud) Reflect.set(process.env, "NODE_ENV", "production");
+loadEnvConfig(process.cwd(), !cloud);
 
 async function main() {
   const args = process.argv.slice(2);

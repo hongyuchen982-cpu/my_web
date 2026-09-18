@@ -5,6 +5,7 @@ import matter from "gray-matter";
 
 const cloud = process.argv.includes("--cloud");
 const cleanupForks = process.argv.includes("--cleanup-forks");
+const postArg = process.argv.find((argument) => argument.startsWith("--post="))?.slice("--post=".length);
 if (cloud) Reflect.set(process.env, "NODE_ENV", "production");
 loadEnvConfig(process.cwd(), !cloud);
 
@@ -73,8 +74,12 @@ async function main() {
   const { prisma } = await import("../src/lib/db");
   try {
     const author = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
+    const selectedFiles = postArg
+      ? POST_FILES.filter((file) => file.replace(/\.md$/, "") === postArg)
+      : POST_FILES;
+    if (postArg && selectedFiles.length === 0) throw new Error(`未知文章：${postArg}`);
 
-    for (const file of POST_FILES) {
+    for (const file of selectedFiles) {
       const source = await readFile(path.join(process.cwd(), "posts", file), "utf8");
       const parsed = matter(source);
       const slug = file.replace(/\.md$/, "");
@@ -95,20 +100,20 @@ async function main() {
       });
     }
 
-    const attributed = author
+    const attributed = author && !postArg
       ? await prisma.post.updateMany({
           where: { authorId: null },
           data: { authorId: author.id },
         })
       : { count: 0 };
 
-    const removed = cleanupForks
+    const removed = cleanupForks && !postArg
       ? await prisma.project.deleteMany({
           where: { github: { in: [...FORK_URLS] } },
         })
       : { count: 0 };
 
-    for (const project of PROJECTS) {
+    for (const project of postArg ? [] : PROJECTS) {
       const existing = await prisma.project.findFirst({ where: { github: project.github } });
       const data = {
         title: project.title,
@@ -126,7 +131,7 @@ async function main() {
     }
 
     console.log(
-      `${cloud ? "云端" : "本地"}同步完成：${POST_FILES.length} 篇个人文章，补齐 ${attributed.count} 篇文章作者，4 个原创项目${cleanupForks ? `，移除 ${removed.count} 个 Fork 项目` : ""}。`,
+      `${cloud ? "云端" : "本地"}同步完成：${selectedFiles.length} 篇个人文章，补齐 ${attributed.count} 篇文章作者，${postArg ? 0 : 4} 个原创项目${cleanupForks && !postArg ? `，移除 ${removed.count} 个 Fork 项目` : ""}。`,
     );
   } finally {
     await prisma.$disconnect();
