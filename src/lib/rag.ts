@@ -154,6 +154,31 @@ export function missingQuestionTerms(question: string, answer: string): string[]
   return terms.filter((term) => !normalizedAnswer.includes(term));
 }
 
+export function extractQuestionTermAnswer(question: string, matches: Pick<KnowledgeMatch, "content">[]): string | null {
+  const terms = [...new Set(question.toLocaleLowerCase().match(/[a-z][a-z0-9.+#-]{1,}/g) ?? [])];
+  if (terms.length < 2) return null;
+  const answers = terms.map((term) => {
+    const candidates = matches.flatMap((match, matchIndex) => match.content.split("\n").map((rawLine) => {
+      const line = rawLine.trim();
+      if (!line.toLocaleLowerCase().includes(term) || /^\|?\s*:?-{3,}/.test(line)) return null;
+      const cells = line.startsWith("|")
+        ? line.split("|").map((cell) => cell.replace(/[*_`]/g, "").trim()).filter(Boolean)
+        : [];
+      const cleaned = cells.length >= 2
+        ? `${cells[0]}：${cells[1]}`
+        : line.replace(/^[-*]\s+/, "").replace(/[*_`#]/g, "").trim();
+      if (cleaned.length < 8 || cleaned.length > 280) return null;
+      const firstCell = cells[0]?.toLocaleLowerCase() ?? "";
+      const priority = firstCell === term ? 3 : firstCell.includes(term) ? 2 : cleaned.toLocaleLowerCase().startsWith(term) ? 1 : 0;
+      return { cleaned, matchIndex, priority };
+    }).filter((item): item is { cleaned: string; matchIndex: number; priority: number } => item !== null));
+    candidates.sort((left, right) => right.priority - left.priority || left.cleaned.length - right.cleaned.length);
+    const best = candidates[0];
+    return best ? `${best.cleaned} [${best.matchIndex + 1}]` : null;
+  });
+  return answers.every((answer): answer is string => answer !== null) ? answers.join("\n\n") : null;
+}
+
 function claimParagraphs(answer: string) {
   return answer
     .split(/\n+/)
@@ -344,6 +369,16 @@ async function generate(state: { question: string; matches: KnowledgeMatch[]; ch
       refused: false,
       confidence,
       citationScore: citedAnswerScore,
+    };
+  }
+  const extractiveAnswer = extractQuestionTermAnswer(state.question, supportedMatches);
+  if (extractiveAnswer) {
+    return {
+      answer: extractiveAnswer,
+      matches: supportedMatches,
+      refused: false,
+      confidence,
+      citationScore: 0,
     };
   }
   return {

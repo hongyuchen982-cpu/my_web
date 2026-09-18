@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { filterFreeModels, requestChat } from "../src/lib/chat-provider";
 import { directTextMatchScore, keywordMatchScore, titleMatchScore } from "../src/lib/knowledge-index";
-import { missingQuestionTerms, parseGeneratedAnswer } from "../src/lib/rag";
+import { extractQuestionTermAnswer, missingQuestionTerms, parseGeneratedAnswer } from "../src/lib/rag";
 
 test("RAG accepts common grounded output formats from free models", () => {
   assert.equal(
@@ -17,6 +17,13 @@ test("RAG accepts common grounded output formats from free models", () => {
   assert.equal(parseGeneratedAnswer("Redis 传递消息。"), null);
   assert.deepEqual(missingQuestionTerms("Celery、MySQL 和 Redis 如何分工？", "Celery 分发任务。[1]"), ["mysql", "redis"]);
   assert.deepEqual(missingQuestionTerms("Celery、MySQL 和 Redis 如何分工？", "Celery、MySQL、Redis 各有职责。[1]"), []);
+  assert.equal(
+    extractQuestionTermAnswer("Celery、MySQL 和 Redis 如何分工？", [{
+      content: "| 组件 | 职责 |\n|---|---|\n| MySQL | 保存业务状态 |\n| Celery | 分发耗时任务 |\n| Redis | 传递任务消息 |",
+    }]),
+    "Celery：分发耗时任务 [1]\n\nMySQL：保存业务状态 [1]\n\nRedis：传递任务消息 [1]",
+  );
+  assert.equal(extractQuestionTermAnswer("Celery 和 Kafka 如何分工？", [{ content: "Celery 负责分发任务。" }]), null);
 });
 
 test("mixed Chinese and English questions can directly match article titles", () => {
